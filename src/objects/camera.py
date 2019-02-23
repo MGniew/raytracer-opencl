@@ -26,7 +26,7 @@ class Camera(BaseObject):
             position=[0, 0, -2],
             direction=[0, 0, 1],
             z_near=0.1,
-            z_far=20,
+            z_far=10,
             povy=90):
 
         self.position = np.array(position)
@@ -67,6 +67,36 @@ class Camera(BaseObject):
 
         self.update()
 
+    def rotate(self, up, left, down, right):
+
+        angle_lr = math.pi/100
+        angle_ud = math.pi/100
+
+        if right == left:
+            angle_lr = 0
+        elif left:
+            angle_lr *= -1
+        if down == up:
+            angle_ud = 0
+        elif up:
+            angle_ud *= -1
+
+        if angle_ud != 0:
+            axis = self.right
+            self.up = rotate_vec(self.up, axis, angle_ud)
+            self.up = self.up / np.linalg.norm(self.up)
+            self.direction = rotate_vec(self.direction, axis, angle_ud)
+            self.direction = self.direction / np.linalg.norm(self.direction)
+
+        if angle_lr != 0:
+            axis = self.direction
+            self.up = rotate_vec(self.up, axis, angle_lr)
+            self.up = self.up / np.linalg.norm(self.up)
+            self.right = rotate_vec(self.right, axis, angle_lr)
+            self.right = self.right / np.linalg.norm(self.right)
+
+        self.update()
+
     def set_options(self, position, direction):
         self.position = position
         self.direction = direction / np.linalg.norm(direction)
@@ -102,7 +132,7 @@ class Camera(BaseObject):
         self.right = self.right / np.linalg.norm(self.right)
         self.update()
 
-    def rotate(self):
+    def rotate_off_its_axis(self):
 
         angle = math.pi / 400
         self.direction = rotate_vec(self.direction, self.up, angle)

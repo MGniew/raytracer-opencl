@@ -79,16 +79,16 @@ class Connector(object):
             cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR,
             hostbuf=np.array(self.scene.get_objects("Camera")))
 
-        # self.event = self.program.get_image(
-        #     self.queue,
-        #     (300, 300),
-        #     None,
-        #     self.camera_d,
-        #     self.lights_d,
-        #     self.n_lights,
-        #     np.int32(3), np.int32(0),
-        #     self.result_buf
-        #     )
+        #  self.event = self.program.get_image(
+        #      self.queue,
+        #      (300, 300),
+        #      None,
+        #      self.camera_d,
+        #      self.lights_d,
+        #      np.int32(1),
+        #      np.int32(3), np.int32(0),
+        #      self.result_buf
+        #      )
 
         self.event = self.program.get_image(
             self.queue,

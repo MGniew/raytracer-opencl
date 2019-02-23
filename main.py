@@ -10,6 +10,7 @@ def get_args():
     parser.add_argument("--w", type=int, default=300)
     parser.add_argument("--h", type=int, default=300)
     parser.add_argument("--no-gui", action="store_true")
+    parser.add_argument("--scene", type=str, default="scenes/scene.json")
 
     return parser.parse_args()
 
@@ -18,9 +19,8 @@ def main():
 
     args = get_args()
     engine = Engine(
-        # "kernels/mandelbulb.cl",
         "kernels/raytracer.cl",
-        "scenes/scene.json",
+        args.scene,
         args.w,
         args.h)
     engine.run()

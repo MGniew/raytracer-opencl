@@ -51,7 +51,6 @@ class MainWindow(Gtk.Window):
         self.child_conn.send("~" + key)
 
     def on_key_pressed(self, source, event):
-        print("key")
         key = Gdk.keyval_name(event.keyval)
         if key not in self.already_pressed:
             return

@@ -40,7 +40,10 @@ class Engine(object):
                 target=gui_worker, args=(child_conn, width, height))
         self.gui_process.start()
 
-        self.actions = {a: False for a in ["w", "a", "s", "d"]}
+        self.actions = {
+                a: False for a in [
+                    "w", "a", "s", "d",
+                    "Up", "Left", "Down", "Right"]}
         # self.input_thread = Process(target=self.input_worker)
         # self.input_thread.start()
 
@@ -87,6 +90,11 @@ class Engine(object):
                         self.actions["s"],
                         self.actions["a"],
                         self.actions["d"])
+                self.camera.rotate(
+                        self.actions["Up"],
+                        self.actions["Left"],
+                        self.actions["Down"],
+                        self.actions["Right"])
                 self.parent_conn.send(image)
                 self.connector.run()
 
