@@ -22,7 +22,8 @@ class Connector(object):
                                       ("diffuse", cl.cltypes.float3),
                                       ("specular", cl.cltypes.float3)])
 
-        self.result = np.zeros((3 * self.width * self.height), dtype=cl.cltypes.int)
+        self.result = np.zeros(
+                (3 * self.width * self.height), dtype=cl.cltypes.int)
         self.camera_d = cl.Buffer(
             self.context,
             cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR,
@@ -45,7 +46,8 @@ class Connector(object):
             cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR,
             hostbuf=np.array(self.scene.get_objects("Triangle")))
         if self.scene.get_objects("Triangle"):
-            self.n_triangles = np.int32(len(self.scene.get_objects("Triangle")))
+            self.n_triangles = np.int32(
+                    len(self.scene.get_objects("Triangle")))
         else:
             self.n_triangles = np.int32(0)
 

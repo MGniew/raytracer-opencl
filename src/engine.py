@@ -1,15 +1,14 @@
 from src.opencl_connector import Connector
 from src.gui.main_window import MainWindow
 from src.scene import Scene
+import gi
+gi.require_version('Gtk', '3.0')  # noqa: E402
 from gi.repository import Gtk
 
-from src.objects.light import Light
 from src.objects.camera import Camera
-from src.material import Material
 from multiprocessing import Pipe, Process
-import threading
-import datetime
-import time
+#  import datetime
+#  import time
 
 
 def gui_worker(child_conn, w=300, h=300):
@@ -17,6 +16,7 @@ def gui_worker(child_conn, w=300, h=300):
     win.connect("destroy", Gtk.main_quit)
     win.show_all()
     Gtk.main()
+    child_conn.close()
 
 
 class Engine(object):
@@ -26,12 +26,6 @@ class Engine(object):
         scene.load_from_json(scene_filename)
         self.camera = Camera(width, height)
         scene.add_object(self.camera)
-        scene.add_object(Light(
-            Material(
-                [0.5, 0.4, 0.5],
-                [0.5, 0.5, 0.5],
-                [0.4, 0.3, 0.4]),
-            [0, 5, 2]))
         self.connector = Connector(
                 kernel_filename, scene, width, height)
 
@@ -39,18 +33,12 @@ class Engine(object):
         self.gui_process = Process(
                 target=gui_worker, args=(child_conn, width, height))
         self.gui_process.start()
+        self.running = True
 
         self.actions = {
                 a: False for a in [
                     "w", "a", "s", "d",
                     "Up", "Left", "Down", "Right"]}
-        # self.input_thread = Process(target=self.input_worker)
-        # self.input_thread.start()
-
-    #  def input_worker(self):
-    #      while True:
-    #          msg = self.parent_conn.recv()
-    #          print(msg)
 
     def collect_action(self, action):
 
@@ -64,24 +52,17 @@ class Engine(object):
 
     def run(self):
 
-        # self.connector.run(self.send_and_query)
         self.connector.run()
-        # start = datetime.datetime.now()
-        # stop = datetime.datetime.now()
 
-        while True:
+        while self.running:
             if self.parent_conn.poll():
-                msg = self.parent_conn.recv()
-                self.collect_action(msg)
 
-            # delta = stop - start
-            # if delta.total_seconds() > 0.001:
-            #     start = datetime.datetime.now() + ....
-            #     self.camera.move(
-            #             self.actions["w"],
-            #             self.actions["s"],
-            #             self.actions["a"],
-            #             self.actions["d"])
+                try:
+                    msg = self.parent_conn.recv()
+                except EOFError:
+                    self.running = False
+                    break
+                self.collect_action(msg)
 
             image = self.connector.get_if_finished()
             if image:
@@ -95,12 +76,20 @@ class Engine(object):
                         self.actions["Left"],
                         self.actions["Down"],
                         self.actions["Right"])
-                self.parent_conn.send(image)
+                try:
+                    self.parent_conn.send(image)
+                except BrokenPipeError:
+                    self.running = False
+                    break
                 self.connector.run()
 
         self.gui_process.join()
 
     def send_and_query(self, status):
         image = self.connector.get_if_finished()
-        self.parent_conn.send(image)
-        self.connector.run(self.send_and_query)
+        try:
+            self.parent_conn.send(image)
+        except BrokenPipeError:
+            self.running = False
+        else:
+            self.connector.run(self.send_and_query)
