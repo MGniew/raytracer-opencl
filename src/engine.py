@@ -7,8 +7,11 @@ from gi.repository import Gtk
 
 from src.objects.camera import Camera
 from multiprocessing import Pipe, Process
-#  import datetime
+import datetime
 #  import time
+
+
+MS_PER_UPDATE = 0.02
 
 
 def gui_worker(child_conn, w=300, h=300):
@@ -50,13 +53,31 @@ class Engine(object):
         if action in self.actions:
             self.actions[action] = value
 
+    def update(self):
+        self.camera.move(
+                self.actions["w"],
+                self.actions["s"],
+                self.actions["a"],
+                self.actions["d"])
+        self.camera.rotate(
+                self.actions["Up"],
+                self.actions["Left"],
+                self.actions["Down"],
+                self.actions["Right"])
+
     def run(self):
 
         self.connector.run()
 
+        previous = datetime.datetime.now()
+        lag = 0
         while self.running:
-            if self.parent_conn.poll():
+            current = datetime.datetime.now()
+            elapsed = (current - previous).total_seconds()
+            previous = current
+            lag += elapsed
 
+            if self.parent_conn.poll():
                 try:
                     msg = self.parent_conn.recv()
                 except EOFError:
@@ -64,18 +85,12 @@ class Engine(object):
                     break
                 self.collect_action(msg)
 
+            while lag >= MS_PER_UPDATE:
+                self.update()
+                lag -= MS_PER_UPDATE
+
             image = self.connector.get_if_finished()
             if image:
-                self.camera.move(
-                        self.actions["w"],
-                        self.actions["s"],
-                        self.actions["a"],
-                        self.actions["d"])
-                self.camera.rotate(
-                        self.actions["Up"],
-                        self.actions["Left"],
-                        self.actions["Down"],
-                        self.actions["Right"])
                 try:
                     self.parent_conn.send(image)
                 except BrokenPipeError:
