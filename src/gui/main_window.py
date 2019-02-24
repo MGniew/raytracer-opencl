@@ -2,6 +2,8 @@ import gi
 gi.require_version('Gtk', '3.0')  # noqa: E402
 from gi.repository import Gtk, GdkPixbuf, GLib, Gdk
 
+import datetime
+
 
 class MainWindow(Gtk.Window):
 
@@ -15,15 +17,14 @@ class MainWindow(Gtk.Window):
                 k: False for k in ["w", "a", "s", "d",
                                    "Up", "Left", "Right", "Down",
                                    "Escape"]}
-
         vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+
         self.image = Gtk.Image()
         vbox.pack_start(self.image, True, True, 0)
 
-        self.bar = Gtk.Statusbar()
-        self.context = self.bar.get_context_id("default")
-        self.bar.push(self.context, "Status")
-        vbox.pack_start(self.bar, False, True, 0)
+        self.status = Gtk.Label()
+
+        vbox.pack_start(self.status, False, True, 0)
         self.add(vbox)
 
         self.connect("key-press-event", self.on_key_pressed)
@@ -35,6 +36,9 @@ class MainWindow(Gtk.Window):
                 self.on_new_frame_ready,
                 None)
 
+        self.start = datetime.datetime.now()
+        self.fps = 0
+
     def on_new_frame_ready(self, source_object, result, user_data):
         buff = source_object.recv()
         pixbuf = GdkPixbuf.Pixbuf.new_from_data(
@@ -43,6 +47,11 @@ class MainWindow(Gtk.Window):
                     8, self.w, self.h, self.w*3)
         self.image.set_from_pixbuf(pixbuf)
 
+        self.stop = datetime.datetime.now()
+        time_elapsed = (self.stop - self.start).total_seconds()
+        self.fps = 0.9 * self.fps + (1/time_elapsed) * 0.1
+        self.status.set_label("{:4.2f} FPS".format(self.fps))
+        self.start = self.stop
         return True
 
     def on_key_released(self, source, event):

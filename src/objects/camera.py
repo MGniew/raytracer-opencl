@@ -26,7 +26,7 @@ class Camera(BaseObject):
             position=[0, 0, -2],
             direction=[0, 0, 1],
             z_near=0.1,
-            z_far=10,
+            z_far=30,
             povy=90):
 
         self.position = np.array(position)
