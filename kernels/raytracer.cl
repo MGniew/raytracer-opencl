@@ -91,7 +91,7 @@ float intersect_triagle(
     if (det < 0.0001f && det > -0.0001f) return -1;
 
     float invDet = 1.0f/det;
-float3 tvec = origin - triangle->pointA; u = dot(tvec, pvec) * invDet;
+    float3 tvec = origin - triangle->pointA; u = dot(tvec, pvec) * invDet;
     if (u < -0.0001f || u > 1 + 0.0001f) return -1;
 
     float3 qvec = cross(tvec, v0v1);
@@ -146,6 +146,9 @@ float3 getTriangleColor(
         __private float3* normalVector) {
 
     *normalVector = triangle->normalA;
+    if (dot(observationVector, *normalVector) < 0) {
+        *normalVector = - (*normalVector);
+    }
     float3 resultColor = triangle->material.ambience * (float3)(0.4f, 0.4f, 0.4f); // ...* global ambience
 
     for (int i = 0; i < nLights; i++) {

@@ -1,4 +1,5 @@
 import numpy as np
+import pyopencl.cltypes
 import pyopencl as cl
 
 
@@ -9,7 +10,11 @@ class Material(object):
          ("diffuse", cl.cltypes.float3),
          ("specular", cl.cltypes.float3)])
 
-    def __init__(self, ambient, diffuse, specular):
+    def __init__(
+            self,
+            ambient=[0.7, 0.2, 0.3],
+            diffuse=[0.7, 0.2, 0.3],
+            specular=[0.7, 0.2, 0.3]):
         self.ambient = ambient
         self.diffuse = diffuse
         self.specular = specular

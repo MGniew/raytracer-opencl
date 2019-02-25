@@ -1,9 +1,14 @@
 import json
-
+import pywavefront
 from src.objects.base import BaseObject
+
+from src.material import Material
 from src.objects.camera import Camera
 from src.objects.sphere import Sphere
 from src.objects.light import Light
+from src.objects.triangle import Triangle
+
+import numpy as np
 
 
 class Scene(object):
@@ -40,3 +45,21 @@ class Scene(object):
             for obj in v:
                 obj = BaseObject.create(k, obj)
                 self.add_object(obj)
+
+    def load_from_mesh(self, filename):
+
+        scene = pywavefront.Wavefront(filename, collect_faces=True,
+                                      create_materials=True)
+
+        material = Material()
+
+        for mesh in scene.mesh_list:
+            for i, face in enumerate(mesh.faces):
+
+                triangle = Triangle(
+                        material,
+                        [np.array(scene.vertices[face[0]]),
+                         np.array(scene.vertices[face[1]]),
+                         np.array(scene.vertices[face[2]])],
+                        )
+                self.add_object(triangle)

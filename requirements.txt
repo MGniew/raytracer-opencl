@@ -3,3 +3,4 @@ pyopencl
 gobject
 pygobject
 pyyaml
+PyWavefront

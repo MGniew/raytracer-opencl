@@ -8,7 +8,6 @@ from gi.repository import Gtk
 from src.objects.camera import Camera
 from multiprocessing import Pipe, Process
 import datetime
-#  import time
 
 
 MS_PER_UPDATE = 0.02
@@ -27,6 +26,7 @@ class Engine(object):
     def __init__(self, kernel_filename, scene_filename, width, height):
         scene = Scene(None, None)
         scene.load_from_json(scene_filename)
+        scene.load_from_mesh("training02.obj")
         self.camera = Camera(width, height)
         scene.add_object(self.camera)
         self.connector = Connector(
