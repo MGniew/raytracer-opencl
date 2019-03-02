@@ -145,10 +145,25 @@ float3 getTriangleColor(
         __private float3 observationVector,
         __private float3* normalVector) {
 
-    *normalVector = triangle->normalA;
+    float3 ab = triangle->pointA - triangle->pointB;
+    float3 bc = triangle->pointB - triangle->pointC;
+    float3 ca = triangle->pointC - triangle->pointA;
+    float3 ap = triangle->pointA - crossPoint;
+    float3 bp = triangle->pointB - crossPoint;
+
+    float abArea = length(cross(ab, ap))/2;
+    float bcArea = length(cross(bc, bp))/2;
+    float caArea = length(cross(ca, ap))/2;
+
+    *normalVector = triangle->normalA * bcArea + triangle->normalB * caArea + 
+                triangle->normalC * abArea; 
+
+    *normalVector = normalize(*normalVector);
+
     if (dot(observationVector, *normalVector) < 0) {
-        *normalVector = - (*normalVector);
+        *normalVector = - (*normalVector); 
     }
+
     float3 resultColor = triangle->material.ambience * (float3)(0.4f, 0.4f, 0.4f); // ...* global ambience
 
     for (int i = 0; i < nLights; i++) {

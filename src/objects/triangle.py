@@ -3,8 +3,6 @@ import pyopencl as cl
 from src.objects.base import BaseObject
 from src.objects.visible_object import VisibleObject
 
-import numpy as np
-
 
 @BaseObject.register_object()
 class Triangle(VisibleObject):
