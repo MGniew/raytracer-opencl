@@ -11,7 +11,7 @@ class Triangle(VisibleObject):
         [("vertices", cl.cltypes.float3, 3),
          ("normals", cl.cltypes.float3, 3)])
 
-    def __init__(self, material, vertices, normals=None):
+    def __init__(self, material, vertices, normals=None, texture_coord=None):
         super(Triangle, self).__init__(material)
         self.vertices = vertices
         if not normals:
@@ -22,6 +22,7 @@ class Triangle(VisibleObject):
         else:
             self.normals = normals
 
+        self.texture_coord = texture_coord
         self.vertices = [a.tolist() for a in self.vertices]
         self.normals = [a.tolist() for a in self.normals]
 

@@ -14,10 +14,12 @@ class Material(object):
             self,
             ambient=[0.7, 0.2, 0.3],
             diffuse=[0.7, 0.2, 0.3],
-            specular=[0.7, 0.2, 0.3]):
+            specular=[0.7, 0.2, 0.3],
+            texture_num=-1):
         self.ambient = ambient
         self.diffuse = diffuse
         self.specular = specular
+        self.texture_num = texture_num
 
     def _get_cl_repr(self):
 

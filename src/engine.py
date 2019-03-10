@@ -1,18 +1,20 @@
 from src.opencl_connector import Connector
 from src.gui.main_window import MainWindow
+from src.denoiser import Denoiser
 from src.scene import Scene
 import gi
 gi.require_version('Gtk', '3.0')  # noqa: E402
 from gi.repository import Gtk
 
 from src.objects.camera import Camera
-from multiprocessing import Pipe, Process
+from multiprocessing import Pipe, Process, RawArray
 import datetime
+import ctypes
 
 MS_PER_UPDATE = 0.02
 
 
-def gui_worker(child_conn, w=300, h=300):
+def gui_worker(child_conn, w=300, h=300, frame_buffer=None):
     win = MainWindow(w, h, child_conn)
     win.connect("destroy", Gtk.main_quit)
     win.show_all()
@@ -23,19 +25,28 @@ def gui_worker(child_conn, w=300, h=300):
 class Engine(object):
 
     def __init__(self, kernel_filename, scene_filename, width, height):
+
+        # shared mem
+        frame_buffer = RawArray(
+                ctypes.c_char,
+                width * height * 3)
+
         scene = Scene(None, None)
         scene.load_from_json(scene_filename)
-        #  scene.load_from_mesh("meshes/f-16.obj")
+        # scene.load_from_mesh("models/castle-village-scene/source/Scena_05.obj")
+        scene.load_from_mesh("models/van-gogh-room/source/Enter a title.obj")
         self.camera = Camera(width, height)
         scene.add_object(self.camera)
         self.connector = Connector(
-                kernel_filename, scene, width, height)
+                kernel_filename, scene, width, height, frame_buffer)
 
         self.parent_conn, child_conn = Pipe()
         self.gui_process = Process(
-                target=gui_worker, args=(child_conn, width, height))
+                target=gui_worker, args=(child_conn, width, height,
+                                         frame_buffer))
         self.gui_process.start()
         self.running = True
+        self.denoiser = Denoiser(width, height)
 
         self.actions = {
                 a: False for a in [
@@ -89,9 +100,10 @@ class Engine(object):
                 lag -= MS_PER_UPDATE
 
             image = self.connector.get_if_finished()
-            if image:
+            if image is not None:
                 try:
-                    self.parent_conn.send(image)
+                    # image = self.denoiser.denoise(image)
+                    self.parent_conn.send(image.tobytes())
                 except BrokenPipeError:
                     self.running = False
                     break

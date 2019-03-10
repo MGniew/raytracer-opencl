@@ -4,3 +4,4 @@ gobject
 pygobject
 pyyaml
 PyWavefront
+opencv-python

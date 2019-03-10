@@ -1,11 +1,11 @@
 import numpy as np
 import pyopencl as cl
+from PIL import Image
 
 
 class Connector(object):
 
-    def __init__(self, filename, scene, width, height):
-
+    def __init__(self, filename, scene, width, height, frame_buffer):
         self.scene = scene
         self.platform = cl.get_platforms()[0]
         self.device = self.platform.get_devices()
@@ -14,7 +14,24 @@ class Connector(object):
         self.program = self.build_program(filename)
         self.width = width
         self.height = height
+        self.noise = np.int32(4)
         self.setup()
+        # self.result = np.frombuffer(frame_buffer.get_obj())
+
+    def load_image(self, filename):
+
+        img = Image.open(filename)
+        img.load()
+        return np.asarray(img, dtype="int32")
+
+    def send_textures(self):
+
+        textures = {v: k for k, v in self.scene.textures.items()}
+        images = []
+
+        for k, v in textures:
+            image = self.load_image(v)
+            images.append(image)
 
     def setup(self):  # delete it later
         self.light_struct = np.dtype([("position", cl.cltypes.float3),
@@ -23,14 +40,13 @@ class Connector(object):
                                       ("specular", cl.cltypes.float3)])
 
         self.result = np.zeros(
-                (3 * self.width * self.height), dtype=cl.cltypes.int)
+                (self.width * self.height * 3), dtype=cl.cltypes.char)
         self.camera_d = cl.Buffer(
             self.context,
             cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR,
             hostbuf=np.array(self.scene.get_objects("Camera")))
         self.lights_d = cl.Buffer(
-            self.context,
-            cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR,
+            self.context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR,
             hostbuf=np.array(self.scene.get_objects("Light")))
         self.n_lights = np.int32(len(self.scene.get_objects("Light")))
         self.spheres_d = cl.Buffer(
@@ -57,6 +73,18 @@ class Connector(object):
             self.result.nbytes)
         self.event = None
 
+        # self.kernel = self.program.get_image
+        # self.kernel.set_args(
+        #     self.camera_d,
+        #     self.lights_d,
+        #     self.n_lights,
+        #     self.spheres_d,
+        #     self.n_spheres,
+        #     self.triangles_d,
+        #     self.n_triangles,
+        #     self.noise,
+        #     self.result_buf)
+
     def build_program(self, filename):
 
         with open(filename) as f:
@@ -70,9 +98,10 @@ class Connector(object):
                 cl.command_execution_status.COMPLETE):
             self.queue.finish()
             cl.enqueue_copy(self.queue, self.result, self.result_buf)
-            return bytes(self.result.tolist())
+            #  return bytes(self.result.tolist())
+            return self.result
 
-        return False
+        return None
 
     def run(self, callback=None):
 
@@ -81,20 +110,15 @@ class Connector(object):
             cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR,
             hostbuf=np.array(self.scene.get_objects("Camera")))
 
-        #  self.event = self.program.get_image(
-        #      self.queue,
-        #      (300, 300),
-        #      None,
-        #      self.camera_d,
-        #      self.lights_d,
-        #      np.int32(1),
-        #      np.int32(3), np.int32(0),
-        #      self.result_buf
-        #      )
+        # self.event = cl.enqueue_nd_range_kernel(
+        #         self.queue,
+        #         self.kernel,
+        #         (np.int32(self.width/self.noise), np.int32(self.height)),
+        #         None)
 
         self.event = self.program.get_image(
             self.queue,
-            (self.width, self.height),
+            (np.int32(self.width/self.noise), np.int32(self.height)),
             None,
             self.camera_d,
             self.lights_d,
@@ -103,6 +127,7 @@ class Connector(object):
             self.n_spheres,
             self.triangles_d,
             self.n_triangles,
+            self.noise,
             self.result_buf
             )
 

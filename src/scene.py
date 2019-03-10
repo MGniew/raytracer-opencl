@@ -17,6 +17,7 @@ class Scene(object):
         self.background_color = background_color
         self.global_ambient = global_ambient
         self.objects = dict()
+        self.textures = None
 
     def add_object(self, obj):
 
@@ -51,8 +52,7 @@ class Scene(object):
 
         normals = []
         tri_vertices = []
-
-        print(len(vertices))
+        texture_coord = []
 
         i = 0
         for el in formats:
@@ -63,11 +63,10 @@ class Scene(object):
             while x:
                 for el in formats:
                     if el == "T2F":
+                        texture_coord.append(np.array(x[:2]))
                         x = x[2:]
-                        print(el)
                     elif el == "C3F":
                         x = x[3:]
-                        print(el)
                     elif el == "N3F":
                         normals.append(np.array(x[:3]))
                         x = x[3:]
@@ -78,37 +77,38 @@ class Scene(object):
             yield Triangle(
                     material,
                     tri_vertices,
-                    normals)
+                    normals,
+                    texture_coord)
 
             normals = []
             tri_vertices = []
+            texture_coord = []
 
     def load_from_mesh(self, filename):
 
         scene = pywavefront.Wavefront(filename, collect_faces=True,
                                       create_materials=True)
 
+        textures = {None: -1}
+        texture_num = 0
+
         for name, material in scene.materials.items():
+            if material.texture.path and material.texture.path not in textures:
+                textures[material.texture.path] = texture_num
+                texture_num += 1
             mat = Material(
                     material.ambient,
                     material.diffuse,
-                    material.specular)
+                    material.specular,
+                    textures[material.texture.path])
 
             for triangle in self.triangle_gen(
                     material.vertices, material.vertex_format, mat):
                 self.add_object(triangle)
 
-            # shininess...
-            # emissive...
-            # transparency...
-            # texture?
+        print("Scene loaded!")
 
-        #for mesh in scene.mesh_list:
-        #    for i, face in enumerate(mesh.faces):
-        #        triangle = Triangle(
-        #                material,
-        #                [np.array(scene.vertices[face[0]]),
-        #                 np.array(scene.vertices[face[1]]),
-        #                 np.array(scene.vertices[face[2]])]
-        #                )
-        #        self.add_object(triangle)
+        # shininess...
+        # emissive...
+        # transparency...
+        # texture?

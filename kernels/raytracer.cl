@@ -42,8 +42,7 @@ float3 getCameraRay(
         const int pixelX,
         const int pixelY,
         const int pixelWidth,
-        const int pixelHeight) {
-
+        const int pixelHeight) { 
     float distanceX = pixelX/(float)pixelWidth;
     float distanceY = pixelY/(float)pixelHeight;
     float3 worldPixel = camera->topLeftCorner + distanceX * camera->worldWidth * camera->rightVector;
@@ -291,12 +290,19 @@ __kernel void get_image(__constant struct Camera* camera,
         const int nSpheres,
         __constant struct Triangle* triangles,
         const int nTriangles,
-        __global int* output) {
+        const int noise,
+        __global uchar* output) {
 
-    const int pixelX = get_global_id(0);
-    const int pixelY = get_global_id(1);
-    const int pixelWidth = get_global_size(0);
-    const int pixelHeight = get_global_size(1);
+    int pixelX = get_global_id(0);
+    int pixelY = get_global_id(1);
+    int pixelWidth = get_global_size(0) * noise;
+    int pixelHeight = get_global_size(1);
+
+    if (noise > 1) {
+        pixelX += pixelX * (noise - 1);
+        pixelX += pixelY % noise;
+    }
+
     float3 result = trace(camera->position,
             getCameraRay(camera, pixelX,
                 pixelY, pixelWidth,
@@ -304,18 +310,11 @@ __kernel void get_image(__constant struct Camera* camera,
             camera->zFar,
             lights, nLights,
             spheres, nSpheres,
-            triangles, nTriangles); 
+            triangles, nTriangles);
 
-    result = fabs(result);
-    if (result.x > 1)
-        result.x = 1;
-    if (result.y > 1)
-        result.y = 1;
-    if (result.z > 1)
-        result.z = 1;
-
-    output[pixelY * pixelWidth * 3 + pixelX * 3 ] = (int)(result.x * 254);
-    output[pixelY * pixelWidth * 3 + pixelX * 3 + 1] = (int)(result.y * 254);
-    output[pixelY * pixelWidth * 3 + pixelX * 3 + 2] = (int)(result.z * 254);
+    result = clamp(result, 0.0f, 1.0f);
+    output[pixelY * pixelWidth * 3 + pixelX * 3 ] = convert_uchar(result.x * 255);
+    output[pixelY * pixelWidth * 3 + pixelX * 3 + 1] = convert_uchar(result.y * 255);
+    output[pixelY * pixelWidth * 3 + pixelX * 3 + 2] = convert_uchar(result.z * 255);
 
 }
