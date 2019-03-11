@@ -1,6 +1,8 @@
 import numpy as np
 import pyopencl as cl
 from PIL import Image
+import scipy as sp
+import scipy.ndimage
 
 
 class Connector(object):
@@ -14,26 +16,66 @@ class Connector(object):
         self.program = self.build_program(filename)
         self.width = width
         self.height = height
-        self.noise = np.int32(4)
+        self.noise = np.int32(1)
+        self.n_textures = np.int32(0)
         self.setup()
         # self.result = np.frombuffer(frame_buffer.get_obj())
 
     def load_image(self, filename):
 
+        # return sp.ndimage.imread(filename, mode="RGBA")
         img = Image.open(filename)
         img.load()
-        return np.asarray(img, dtype="int32")
+        data = np.asarray(img, dtype=np.uint8)
+        # data = np.asarray(img)
+        return data
 
     def send_textures(self):
 
         textures = {v: k for k, v in self.scene.textures.items()}
         images = []
+        max_width = 0
+        max_height = 0
 
-        for k, v in textures:
-            image = self.load_image(v)
+        for k, v in textures.items():
+            if v is None:
+                continue
+            image = self.load_image("texture.jpeg")
+            print(v)
+
+            if image.shape[0] > max_height:
+                max_height = image.shape[0]
+
+            if image.shape[1] > max_width:
+                max_width = image.shape[1]
+
             images.append(image)
+            self.n_textures += 1
+
+        images = [
+                np.pad(image,
+                ((0, max_height - image.shape[0]),
+                 (0, max_width - image.shape[1]),
+                 (0, 4 - image.shape[2])), 
+                 "constant") for image in images]
+
+        #images = images[0]
+        #images = np.pad(image, ((0,0), (0,0), (0,1)), "constant")
+        images = np.concatenate(images, 2)
+
+        img_format = cl.ImageFormat(cl.channel_order.RGBA,
+                                    cl.channel_type.UNSIGNED_INT8)
+        # 
+        image = cl.Image(self.context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR,
+                         img_format, hostbuf=images, is_array=False,
+                         pitches=(images.shape[0] * images.shape[1], images.shape[2]))
+
+        #image = cl.image_from_array(self.context, images, 4)
+        self.textures = image
+
 
     def setup(self):  # delete it later
+        self.send_textures()
         self.light_struct = np.dtype([("position", cl.cltypes.float3),
                                       ("ambience", cl.cltypes.float3),
                                       ("diffuse", cl.cltypes.float3),
@@ -128,6 +170,7 @@ class Connector(object):
             self.triangles_d,
             self.n_triangles,
             self.noise,
+            self.textures,
             self.result_buf
             )
 

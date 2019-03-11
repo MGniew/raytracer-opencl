@@ -5,3 +5,4 @@ pygobject
 pyyaml
 PyWavefront
 opencv-python
+Pillow

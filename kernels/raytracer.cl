@@ -4,6 +4,12 @@ struct Material {
     float3 specular;
 };
 
+struct Texture {
+    uchar* data;
+    int width;
+    int height;
+};
+
 struct Sphere {
     float3 position;
     float radius;
@@ -229,7 +235,6 @@ __constant struct Triangle* getClosestTriangle(
 }
 
 
-
 float3 trace(
         float3 origin,
         float3 direction,
@@ -291,6 +296,7 @@ __kernel void get_image(__constant struct Camera* camera,
         __constant struct Triangle* triangles,
         const int nTriangles,
         const int noise,
+        read_only image3d_t textures,
         __global uchar* output) {
 
     int pixelX = get_global_id(0);
@@ -303,18 +309,14 @@ __kernel void get_image(__constant struct Camera* camera,
         pixelX += pixelY % noise;
     }
 
-    float3 result = trace(camera->position,
-            getCameraRay(camera, pixelX,
-                pixelY, pixelWidth,
-                pixelHeight),
-            camera->zFar,
-            lights, nLights,
-            spheres, nSpheres,
-            triangles, nTriangles);
+    int width = get_image_width(textures);
+    int height = get_image_height(textures);
 
-    result = clamp(result, 0.0f, 1.0f);
-    output[pixelY * pixelWidth * 3 + pixelX * 3 ] = convert_uchar(result.x * 255);
-    output[pixelY * pixelWidth * 3 + pixelX * 3 + 1] = convert_uchar(result.y * 255);
-    output[pixelY * pixelWidth * 3 + pixelX * 3 + 2] = convert_uchar(result.z * 255);
+    const sampler_t sampler = CLK_FILTER_NEAREST | CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE;
+    uint4 result = read_imageui(textures, sampler, (int4)(pixelX, pixelY, 0, 0));
+    output[pixelY * pixelWidth * 3 + pixelX * 3 ] = (uchar)(result.x);
+    output[pixelY * pixelWidth * 3 + pixelX * 3 + 1] = (uchar)result.y;
+    output[pixelY * pixelWidth * 3 + pixelX * 3 + 2] = (uchar)result.z;
+
 
 }

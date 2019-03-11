@@ -106,6 +106,9 @@ class Scene(object):
                     material.vertices, material.vertex_format, mat):
                 self.add_object(triangle)
 
+
+        self.textures = textures
+
         print("Scene loaded!")
 
         # shininess...
