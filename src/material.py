@@ -1,5 +1,5 @@
 import numpy as np
-import pyopencl.cltypes
+import pyopencl.cltypes  # noqa: F401
 import pyopencl as cl
 
 

@@ -1,8 +1,6 @@
 import numpy as np
 import pyopencl as cl
 from PIL import Image
-import scipy as sp
-import scipy.ndimage
 
 
 class Connector(object):
@@ -19,15 +17,13 @@ class Connector(object):
         self.noise = np.int32(1)
         self.n_textures = np.int32(0)
         self.setup()
-        # self.result = np.frombuffer(frame_buffer.get_obj())
 
     def load_image(self, filename):
 
-        # return sp.ndimage.imread(filename, mode="RGBA")
         img = Image.open(filename)
         img.load()
         data = np.asarray(img, dtype=np.uint8)
-        # data = np.asarray(img)
+
         return data
 
     def send_textures(self):
@@ -40,7 +36,7 @@ class Connector(object):
         for k, v in textures.items():
             if v is None:
                 continue
-            image = self.load_image("texture.jpeg")
+            image = self.load_image(v)
             print(v)
 
             if image.shape[0] > max_height:
@@ -53,26 +49,24 @@ class Connector(object):
             self.n_textures += 1
 
         images = [
-                np.pad(image,
+            np.pad(
+                image,
                 ((0, max_height - image.shape[0]),
                  (0, max_width - image.shape[1]),
-                 (0, 4 - image.shape[2])), 
-                 "constant") for image in images]
+                 (0, 4 - image.shape[2])),
+                "constant") for image in images]
 
-        #images = images[0]
-        #images = np.pad(image, ((0,0), (0,0), (0,1)), "constant")
-        images = np.concatenate(images, 2)
+        images = np.concatenate(images, 0)
 
         img_format = cl.ImageFormat(cl.channel_order.RGBA,
                                     cl.channel_type.UNSIGNED_INT8)
-        # 
-        image = cl.Image(self.context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR,
-                         img_format, hostbuf=images, is_array=False,
-                         pitches=(images.shape[0] * images.shape[1], images.shape[2]))
+        image = cl.Image(self.context,
+                         cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR,
+                         img_format, hostbuf=images, is_array=True,
+                         shape=(max_width, max_height, 4),
+                         pitches=(max_width * 4, max_width * max_height * 4))
 
-        #image = cl.image_from_array(self.context, images, 4)
         self.textures = image
-
 
     def setup(self):  # delete it later
         self.send_textures()
@@ -140,7 +134,6 @@ class Connector(object):
                 cl.command_execution_status.COMPLETE):
             self.queue.finish()
             cl.enqueue_copy(self.queue, self.result, self.result_buf)
-            #  return bytes(self.result.tolist())
             return self.result
 
         return None
@@ -151,12 +144,6 @@ class Connector(object):
             self.context,
             cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR,
             hostbuf=np.array(self.scene.get_objects("Camera")))
-
-        # self.event = cl.enqueue_nd_range_kernel(
-        #         self.queue,
-        #         self.kernel,
-        #         (np.int32(self.width/self.noise), np.int32(self.height)),
-        #         None)
 
         self.event = self.program.get_image(
             self.queue,

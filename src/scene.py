@@ -85,10 +85,13 @@ class Scene(object):
             texture_coord = []
 
     def load_from_mesh(self, filename):
+        # shininess...
+        # emissive...
+        # transparency...
+        # texture?
 
         scene = pywavefront.Wavefront(filename, collect_faces=True,
                                       create_materials=True)
-
         textures = {None: -1}
         texture_num = 0
 
@@ -106,12 +109,5 @@ class Scene(object):
                     material.vertices, material.vertex_format, mat):
                 self.add_object(triangle)
 
-
         self.textures = textures
-
         print("Scene loaded!")
-
-        # shininess...
-        # emissive...
-        # transparency...
-        # texture?

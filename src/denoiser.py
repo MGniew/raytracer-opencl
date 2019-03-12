@@ -13,11 +13,11 @@ class Denoiser(object):
     def denoise(self, image):
         image = image.reshape(300, 300, 3)
         image = image.astype(np.uint8, copy=False)
-        #self.sequence.append(image)
-        #if len(self.sequence) > 5:
+        # self.sequence.append(image)
+        # if len(self.sequence) > 5:
         #    self.sequence.pop(0)
 
-        #if len(self.sequence) != 5:
+        # if len(self.sequence) != 5:
         #    return image
 
         return cv2.fastNlMeansDenoisingColored(

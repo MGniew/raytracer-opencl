@@ -296,7 +296,7 @@ __kernel void get_image(__constant struct Camera* camera,
         __constant struct Triangle* triangles,
         const int nTriangles,
         const int noise,
-        read_only image3d_t textures,
+        read_only image2d_array_t textures,
         __global uchar* output) {
 
     int pixelX = get_global_id(0);
