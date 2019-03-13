@@ -8,7 +8,10 @@ class Material(object):
     material_struct = np.dtype(
         [("ambience", cl.cltypes.float3),
          ("diffuse", cl.cltypes.float3),
-         ("specular", cl.cltypes.float3)])
+         ("specular", cl.cltypes.float3),
+         ("texture_num", np.int32),
+         ("padding", np.int32, 15)  # ugly sollution
+         ])
 
     def __init__(
             self,
@@ -25,5 +28,8 @@ class Material(object):
 
         return np.array((cl.array.vec.make_float3(*self.ambient),
                         cl.array.vec.make_float3(*self.diffuse),
-                        cl.array.vec.make_float3(*self.specular)),
+                        cl.array.vec.make_float3(*self.specular),
+                        self.texture_num,
+                        [0] * 15,
+                        ),
                         dtype=self.material_struct)

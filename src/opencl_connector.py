@@ -2,6 +2,9 @@ import numpy as np
 import pyopencl as cl
 from PIL import Image
 
+from src.material import Material
+from src.objects.triangle import Triangle
+
 
 class Connector(object):
 
@@ -17,6 +20,15 @@ class Connector(object):
         self.noise = np.int32(1)
         self.n_textures = np.int32(0)
         self.setup()
+
+        # my_struct, my_struct_c_decl = cl.tools.match_dtype_to_c_struct(
+        #         self.context.devices[0], "my_struct",
+        #         Material.material_struct)
+        # print(my_struct_c_decl)
+        # my_struct, my_struct_c_decl = cl.tools.match_dtype_to_c_struct(
+        #         self.context.devices[0], "my_struct",
+        #         Triangle.triangle_struct)
+        # print(my_struct_c_decl)
 
     def load_image(self, filename):
 
@@ -47,6 +59,9 @@ class Connector(object):
 
             images.append(image)
             self.n_textures += 1
+
+        if len(images) == 0:
+            return
 
         images = [
             np.pad(
@@ -157,7 +172,7 @@ class Connector(object):
             self.triangles_d,
             self.n_triangles,
             self.noise,
-            self.textures,
+            # self.textures,
             self.result_buf
             )
 

@@ -94,16 +94,17 @@ class Scene(object):
                                       create_materials=True)
         textures = {None: -1}
         texture_num = 0
-
+        texture_path = None
         for name, material in scene.materials.items():
-            if material.texture.path and material.texture.path not in textures:
+            if material.texture and material.texture.path not in textures:
+                texture_path = material.texture.path
                 textures[material.texture.path] = texture_num
                 texture_num += 1
             mat = Material(
                     material.ambient,
                     material.diffuse,
                     material.specular,
-                    textures[material.texture.path])
+                    textures[texture_path])
 
             for triangle in self.triangle_gen(
                     material.vertices, material.vertex_format, mat):
