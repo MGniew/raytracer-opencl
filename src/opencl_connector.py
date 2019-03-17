@@ -8,7 +8,7 @@ from src.objects.triangle import Triangle
 
 class Connector(object):
 
-    def __init__(self, filename, scene, width, height, frame_buffer):
+    def __init__(self, filename, scene, width, height, noise):
         self.scene = scene
         self.platform = cl.get_platforms()[0]
         self.device = self.platform.get_devices()
@@ -17,17 +17,8 @@ class Connector(object):
         self.program = self.build_program(filename)
         self.width = width
         self.height = height
-        self.noise = np.int32(1)
+        self.noise = np.int32(noise)
         self.setup()
-
-        # my_struct, my_struct_c_decl = cl.tools.match_dtype_to_c_struct(
-        #         self.context.devices[0], "my_struct",
-        #         Material.material_struct)
-        # print(my_struct_c_decl)
-        # my_struct, my_struct_c_decl = cl.tools.match_dtype_to_c_struct(
-        #         self.context.devices[0], "my_struct",
-        #         Triangle.triangle_struct)
-        # print(my_struct_c_decl)
 
     def load_image(self, filename):
 
@@ -39,25 +30,26 @@ class Connector(object):
 
     def send_textures(self):
 
-        textures = {v: k for k, v in self.scene.textures.items()}
         images = []
         max_width = 0
         max_height = 0
+        if self.scene.textures:
+            textures = {v: k for k, v in self.scene.textures.items()}
 
-        for i in sorted(textures.keys()):
-            print(i)
-            v = textures[i]
-            if v is None:
-                continue
-            image = self.load_image(v)
+            for i in sorted(textures.keys()):
+                print(i)
+                v = textures[i]
+                if v is None:
+                    continue
+                image = self.load_image(v)
 
-            if image.shape[0] > max_height:
-                max_height = image.shape[0]
+                if image.shape[0] > max_height:
+                    max_height = image.shape[0]
 
-            if image.shape[1] > max_width:
-                max_width = image.shape[1]
+                if image.shape[1] > max_width:
+                    max_width = image.shape[1]
 
-            images.append(image)
+                images.append(image)
 
         if len(images) == 0:
             images = [np.zeros((128, 128, 3))]

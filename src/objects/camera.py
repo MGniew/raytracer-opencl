@@ -23,10 +23,10 @@ class Camera(BaseObject):
             self,
             width=300,
             height=300,
-            position=[0, 1, 4],
+            position=[0, 1, 10],
             direction=[0, 0, -1],
             z_near=0.1,
-            z_far=30,
+            z_far=1000,
             povy=90):
 
         self.position = np.array(position)

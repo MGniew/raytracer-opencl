@@ -7,14 +7,14 @@ gi.require_version('Gtk', '3.0')  # noqa: E402
 from gi.repository import Gtk
 
 from src.objects.camera import Camera
-from multiprocessing import Pipe, Process, RawArray
+from multiprocessing import Pipe, Process
 import datetime
 import ctypes
 
 MS_PER_UPDATE = 0.02
 
 
-def gui_worker(child_conn, w=300, h=300, frame_buffer=None):
+def gui_worker(child_conn, w=300, h=300):
     win = MainWindow(w, h, child_conn)
     win.connect("destroy", Gtk.main_quit)
     win.show_all()
@@ -24,27 +24,21 @@ def gui_worker(child_conn, w=300, h=300, frame_buffer=None):
 
 class Engine(object):
 
-    def __init__(self, kernel_filename, scene_filename, width, height):
-
-        # shared mem
-        frame_buffer = RawArray(
-                ctypes.c_char,
-                width * height * 3)
+    def __init__(
+            self, kernel_filename, scene_filename, width, height, noise, obj):
 
         scene = Scene(None, None)
         scene.load_from_json(scene_filename)
-        # scene.load_from_mesh("models/castle-village-scene/source/Scena_05.obj")
-        scene.load_from_mesh("models/f16/f16.obj")
-        # scene.load_from_mesh("meshes/f-16.obj")
+        if obj:
+            scene.load_from_mesh(obj)
         self.camera = Camera(width, height)
         scene.add_object(self.camera)
         self.connector = Connector(
-                kernel_filename, scene, width, height, frame_buffer)
+                kernel_filename, scene, width, height, noise)
 
         self.parent_conn, child_conn = Pipe()
         self.gui_process = Process(
-                target=gui_worker, args=(child_conn, width, height,
-                                         frame_buffer))
+                target=gui_worker, args=(child_conn, width, height))
         self.gui_process.start()
         self.running = True
         self.denoiser = Denoiser(width, height)

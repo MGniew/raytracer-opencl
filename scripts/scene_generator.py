@@ -283,7 +283,7 @@ def main():
 
     output = dict()
     args = get_args()
-    output["Camera"] = [get_camera()]
+    # output["Camera"] = [get_camera()]
     # output["Scene"] = get_scene_config()
     output["Light"] = get_lights(args.lights)
 
