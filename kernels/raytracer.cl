@@ -4,7 +4,7 @@ struct Material {
     float3 specular;
     float texture_num;
     float pad[15];
-};
+}; 
 
 struct Texture {
     uchar* data;
@@ -29,7 +29,7 @@ struct Triangle {
     float3 textureB;
     float3 textureC;
     struct Material material;
-};
+};// __attribute__((aligned(4)));
 
 struct Camera {
     float3 position;
@@ -153,20 +153,53 @@ float3 getTriangleColor(
         __private int nLights,
         __private float3 crossPoint,
         __private float3 observationVector,
-        __private float3* normalVector) {
+        __private float3* normalVector,
+        read_only image2d_array_t textures) {
 
     float3 ab = triangle->pointA - triangle->pointB;
     float3 bc = triangle->pointB - triangle->pointC;
     float3 ca = triangle->pointC - triangle->pointA;
     float3 ap = triangle->pointA - crossPoint;
     float3 bp = triangle->pointB - crossPoint;
-
     float abArea = length(cross(ab, ap))/2;
     float bcArea = length(cross(bc, bp))/2;
     float caArea = length(cross(ca, ap))/2;
 
-    *normalVector = triangle->normalA * bcArea + triangle->normalB * caArea + 
-                triangle->normalC * abArea; 
+    float tArea = length(cross(ab, bc))/2;
+
+    *normalVector = (triangle->normalA * bcArea + triangle->normalB * caArea + 
+                triangle->normalC * abArea) / tArea;
+
+    printf("f4 = %hlf\n", abArea);
+    float3 diffuse = triangle->material.diffuse;
+    if (triangle->material.texture_num >= 0) {
+
+
+        float3 ba = triangle->pointB - triangle->pointA;
+        float3 ca = triangle->pointC - triangle->pointA;
+        float3 pa = crossPoint - triangle->pointA;
+
+        float d00 = dot(ba, ba);
+        float d01 = dot(ba, ca);
+        float d11 = dot(ca, ca);
+        float d20 = dot(pa, ba);
+        float d21 = dot(pa, ca);
+        float denom = d00 * d11 - d01 * d01;
+        float v = (d11 * d20 - d01 * d21) / denom;
+        float w = (d00 * d21 - d01 * d20) / denom;
+        float u = 1 - v - w;
+
+        float3 coordinates = (triangle->textureA * bcArea + triangle->textureB * caArea +
+            triangle->textureC * abArea) / tArea;
+        const sampler_t sampler = CLK_FILTER_NEAREST | CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE;
+        float4 _diffuse = read_imagef(
+                textures, sampler,
+                (float4)(coordinates.y, coordinates.x, triangle->material.texture_num, 0.0f));
+        diffuse = (float3)(_diffuse.x, _diffuse.y, _diffuse.z);
+    } else {
+        printf("not ok %hlf\n", triangle->material.texture_num);
+    }
+
 
     *normalVector = normalize(*normalVector);
 
@@ -174,7 +207,8 @@ float3 getTriangleColor(
         *normalVector = - (*normalVector); 
     }
 
-    float3 resultColor = triangle->material.ambience * (float3)(0.4f, 0.4f, 0.4f); // ...* global ambience
+    //float3 resultColor = triangle->material.ambience * (float3)(0.4f, 0.4f, 0.4f); // ...* global ambience
+    float3 resultColor = diffuse; // ...* global ambience
 
     for (int i = 0; i < nLights; i++) {
         float3 lightVector = normalize(lights[i].position - crossPoint);
@@ -186,7 +220,7 @@ float3 getTriangleColor(
         }
 
         if(n_dot_l > 0.0001f) {//and no in shadow...
-            resultColor += triangle->material.diffuse * lights[i].diffuse * n_dot_l +
+            resultColor += diffuse * lights[i].diffuse * n_dot_l +
                 triangle->material.specular * lights[i].specular * pow(v_dot_r, 30) + //specShin
                 triangle->material.ambience * lights[i].ambience;
         }
@@ -249,12 +283,13 @@ float3 trace(
         __constant struct Sphere* spheres,
         const int n_spheres,
         __constant struct Triangle* triangles,
-        const int n_triangles){
+        const int n_triangles,
+        read_only image2d_array_t textures){
 
 
     float3 color = (float3)(0,0,0);
     float mult = 1;
-    for (int j = 0; j < 3; j ++) {
+    for (int j = 0; j < 1; j ++) {
         float dist = zFar;
         __constant struct Sphere* sphere = getClosestSphere(spheres, n_spheres,
                                                  &dist, origin, direction);
@@ -270,7 +305,8 @@ float3 trace(
                     nLights,
                     origin,
                     direction,
-                    &normalVector);
+                    &normalVector,
+                    textures);
         }
         else if (sphere){
             origin = origin + direction * dist;
@@ -301,7 +337,7 @@ __kernel void get_image(__constant struct Camera* camera,
         __constant struct Triangle* triangles,
         const int nTriangles,
         const int noise,
-        //read_only image2d_array_t textures,
+        read_only image2d_array_t textures,
         __global uchar* output) {
 
     int pixelX = get_global_id(0);
@@ -321,21 +357,20 @@ __kernel void get_image(__constant struct Camera* camera,
             camera->zFar,
             lights, nLights,
             spheres, nSpheres,
-            triangles, nTriangles);
+            triangles, nTriangles,
+            textures);
 
     result = clamp(result, 0.0f, 1.0f);
     output[pixelY * pixelWidth * 3 + pixelX * 3 ] = convert_uchar(result.x * 255);
     output[pixelY * pixelWidth * 3 + pixelX * 3 + 1] = convert_uchar(result.y * 255);
     output[pixelY * pixelWidth * 3 + pixelX * 3 + 2] = convert_uchar(result.z * 255);
 
-    //int width = get_image_width(textures);
-    //int height = get_image_height(textures);
 
     //const sampler_t sampler = CLK_FILTER_NEAREST | CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE;
-    //uint4 result = read_imageui(textures, sampler, (int4)(pixelX, pixelY, 0, 0));
-    //output[pixelY * pixelWidth * 3 + pixelX * 3 ] = (uchar)(result.x);
-    //output[pixelY * pixelWidth * 3 + pixelX * 3 + 1] = (uchar)result.y;
-    //output[pixelY * pixelWidth * 3 + pixelX * 3 + 2] = (uchar)result.z;
+    //float4 result = read_imagef(textures, sampler, (float4)((float)pixelX, (float)pixelY, 0.0f, 0.0f));
+    //output[pixelY * pixelWidth * 3 + pixelX * 3 ] = convert_uchar(result.x * 255);
+    //output[pixelY * pixelWidth * 3 + pixelX * 3 + 1] = convert_uchar(result.y * 255);
+    //output[pixelY * pixelWidth * 3 + pixelX * 3 + 2] = convert_uchar(result.z * 255);
 
 
 }

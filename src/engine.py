@@ -34,8 +34,8 @@ class Engine(object):
         scene = Scene(None, None)
         scene.load_from_json(scene_filename)
         # scene.load_from_mesh("models/castle-village-scene/source/Scena_05.obj")
-        # scene.load_from_mesh("models/van-gogh-room/source/Enter a title.obj")
-        scene.load_from_mesh("meshes/f-16.obj")
+        scene.load_from_mesh("models/f16/f16.obj")
+        # scene.load_from_mesh("meshes/f-16.obj")
         self.camera = Camera(width, height)
         scene.add_object(self.camera)
         self.connector = Connector(

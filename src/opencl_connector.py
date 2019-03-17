@@ -18,7 +18,6 @@ class Connector(object):
         self.width = width
         self.height = height
         self.noise = np.int32(1)
-        self.n_textures = np.int32(0)
         self.setup()
 
         # my_struct, my_struct_c_decl = cl.tools.match_dtype_to_c_struct(
@@ -45,11 +44,12 @@ class Connector(object):
         max_width = 0
         max_height = 0
 
-        for k, v in textures.items():
+        for i in sorted(textures.keys()):
+            print(i)
+            v = textures[i]
             if v is None:
                 continue
             image = self.load_image(v)
-            print(v)
 
             if image.shape[0] > max_height:
                 max_height = image.shape[0]
@@ -58,10 +58,11 @@ class Connector(object):
                 max_width = image.shape[1]
 
             images.append(image)
-            self.n_textures += 1
 
         if len(images) == 0:
-            return
+            images = [np.zeros((128, 128, 3))]
+            max_width = 128
+            max_height = 128
 
         images = [
             np.pad(
@@ -72,12 +73,11 @@ class Connector(object):
                 "constant") for image in images]
 
         images = np.concatenate(images, 0)
-
         img_format = cl.ImageFormat(cl.channel_order.RGBA,
-                                    cl.channel_type.UNSIGNED_INT8)
+                                    cl.channel_type.UNORM_INT8)
         image = cl.Image(self.context,
                          cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR,
-                         img_format, hostbuf=images, is_array=True,
+                         img_format, hostbuf=images.flatten(), is_array=True,
                          shape=(max_width, max_height, 4),
                          pitches=(max_width * 4, max_width * max_height * 4))
 
@@ -172,7 +172,7 @@ class Connector(object):
             self.triangles_d,
             self.n_triangles,
             self.noise,
-            # self.textures,
+            self.textures,
             self.result_buf
             )
 
