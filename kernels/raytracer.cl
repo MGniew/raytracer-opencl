@@ -29,7 +29,7 @@ struct Triangle {
     float3 textureB;
     float3 textureC;
     struct Material material;
-};// __attribute__((aligned(4)));
+};
 
 struct Camera {
     float3 position;
@@ -360,13 +360,5 @@ __kernel void get_image(__constant struct Camera* camera,
     output[pixelY * pixelWidth * 3 + pixelX * 3 ] = convert_uchar(result.x * 255);
     output[pixelY * pixelWidth * 3 + pixelX * 3 + 1] = convert_uchar(result.y * 255);
     output[pixelY * pixelWidth * 3 + pixelX * 3 + 2] = convert_uchar(result.z * 255);
-
-
-    //const sampler_t sampler = CLK_FILTER_NEAREST | CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE;
-    //float4 result = read_imagef(textures, sampler, (float4)((float)pixelX, (float)pixelY, 0.0f, 0.0f));
-    //output[pixelY * pixelWidth * 3 + pixelX * 3 ] = convert_uchar(result.x * 255);
-    //output[pixelY * pixelWidth * 3 + pixelX * 3 + 1] = convert_uchar(result.y * 255);
-    //output[pixelY * pixelWidth * 3 + pixelX * 3 + 2] = convert_uchar(result.z * 255);
-
 
 }

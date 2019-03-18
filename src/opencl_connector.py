@@ -116,18 +116,6 @@ class Connector(object):
             self.result.nbytes)
         self.event = None
 
-        # self.kernel = self.program.get_image
-        # self.kernel.set_args(
-        #     self.camera_d,
-        #     self.lights_d,
-        #     self.n_lights,
-        #     self.spheres_d,
-        #     self.n_spheres,
-        #     self.triangles_d,
-        #     self.n_triangles,
-        #     self.noise,
-        #     self.result_buf)
-
     def build_program(self, filename):
 
         with open(filename) as f:
