@@ -1,6 +1,6 @@
 from src.opencl_connector import Connector
 from src.gui.main_window import MainWindow
-from src.denoiser import Denoiser
+from src.denoiser.base import Denoiser
 from src.scene import Scene
 import gi
 gi.require_version('Gtk', '3.0')  # noqa: E402
@@ -9,6 +9,9 @@ from gi.repository import Gtk
 from src.objects.camera import Camera
 from multiprocessing import Pipe, Process
 import datetime
+
+# move to __init__.py
+from src.denoiser.mean_pixel import MeanPixel
 
 MS_PER_UPDATE = 0.02
 
@@ -40,7 +43,7 @@ class Engine(object):
                 target=gui_worker, args=(child_conn, width, height))
         self.gui_process.start()
         self.running = True
-        self.denoiser = Denoiser(width, height)
+        self.denoiser = Denoiser.create("MeanPixel", width, height)
 
         self.actions = {
                 a: False for a in [
@@ -109,7 +112,7 @@ class Engine(object):
             image = self.connector.get_if_finished()
             if image is not None:
                 try:
-                    # image = self.denoiser.denoise(image)
+                    image = self.denoiser.denoise(image, self.connector)
                     self.parent_conn.send(image.tobytes())
                 except BrokenPipeError:
                     self.running = False

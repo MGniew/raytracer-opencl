@@ -6,3 +6,4 @@ pyyaml
 PyWavefront
 opencv-python
 Pillow
+sklearn
