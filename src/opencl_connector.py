@@ -2,9 +2,6 @@ import numpy as np
 import pyopencl as cl
 from PIL import Image
 
-from src.material import Material
-from src.objects.triangle import Triangle
-
 
 class Connector(object):
 

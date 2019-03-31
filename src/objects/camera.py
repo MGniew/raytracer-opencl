@@ -1,7 +1,7 @@
 import numpy as np
 import pyopencl as cl
 import pyopencl.cltypes
-import pyopencl.array
+import pyopencl.array  # noqa: F401
 import math
 
 from src.objects.base import BaseObject
@@ -29,6 +29,7 @@ class Camera(BaseObject):
             z_far=1000,
             povy=90):
 
+        self.speed = 0.01
         self.position = np.array(position)
         self.z_far = z_far
         self.direction = np.array(direction)
@@ -56,21 +57,21 @@ class Camera(BaseObject):
     def move(self, forward, backward, left, right):
 
         if forward:
-            self.position = self.position + self.direction * 0.01
+            self.position = self.position + self.direction * self.speed
         elif backward:
-            self.position = self.position - self.direction * 0.01
+            self.position = self.position - self.direction * self.speed
 
         if left:
-            self.position = self.position - self.right * 0.01
+            self.position = self.position - self.right * self.speed
         elif right:
-            self.position = self.position + self.right * 0.01
+            self.position = self.position + self.right * self.speed
 
         self.update()
 
     def rotate(self, up, left, down, right):
 
-        angle_lr = math.pi/100
-        angle_ud = math.pi/100
+        angle_lr = math.pi * 0.01
+        angle_ud = math.pi * 0.01
 
         if right == left:
             angle_lr = 0
@@ -132,9 +133,13 @@ class Camera(BaseObject):
         self.right = self.right / np.linalg.norm(self.right)
         self.update()
 
-    def rotate_off_its_axis(self):
+    def rotate_off_its_axis(self, q, e):
 
-        angle = math.pi / 400
+        if e == q:
+            return
+        angle = math.pi * 0.01
+        if e:
+            angle = -angle
         self.direction = rotate_vec(self.direction, self.up, angle)
         self.right = rotate_vec(self.right, self.up, angle)
         self.update()

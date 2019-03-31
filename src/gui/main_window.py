@@ -15,7 +15,7 @@ class MainWindow(Gtk.Window):
         self.already_pressed = {
                 k: False for k in ["w", "a", "s", "d",
                                    "Up", "Left", "Right", "Down",
-                                   "Escape"]}
+                                   "Escape", "q", "e", "plus", "minus"]}
         vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
 
         self.image = Gtk.Image()

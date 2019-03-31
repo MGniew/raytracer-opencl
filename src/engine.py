@@ -9,7 +9,6 @@ from gi.repository import Gtk
 from src.objects.camera import Camera
 from multiprocessing import Pipe, Process
 import datetime
-import ctypes
 
 MS_PER_UPDATE = 0.02
 
@@ -46,7 +45,8 @@ class Engine(object):
         self.actions = {
                 a: False for a in [
                     "w", "a", "s", "d",
-                    "Up", "Left", "Down", "Right"]}
+                    "Up", "Left", "Down", "Right",
+                    "q", "e", "plus", "minus"]}
 
     def collect_action(self, action):
 
@@ -59,6 +59,15 @@ class Engine(object):
             self.actions[action] = value
 
     def update(self):
+
+        if self.actions["plus"]:
+            self.camera.speed += 0.001
+        if self.actions["minus"]:
+            self.camera.speed -= 0.001
+
+        if self.camera.speed < 0:
+            self.camera.speed = 0
+
         self.camera.move(
                 self.actions["w"],
                 self.actions["s"],
@@ -69,6 +78,9 @@ class Engine(object):
                 self.actions["Left"],
                 self.actions["Down"],
                 self.actions["Right"])
+        self.camera.rotate_off_its_axis(
+                self.actions["q"],
+                self.actions["e"])
 
     def run(self):
 
