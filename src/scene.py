@@ -108,6 +108,7 @@ class Scene(object):
         texture_num = 0
         texture_path = None
         width, height = 0, 0
+        num_triangles = 0
         for name, material in scene.materials.items():
             if material.texture and material.texture.path not in textures:
                 texture_path = material.texture.path
@@ -125,7 +126,8 @@ class Scene(object):
                     material.vertex_format,
                     mat, width, height):
                 self.add_object(triangle)
+                num_triangles += 1
 
         self.textures = textures
-        print(textures)
+        print("Triangles:", num_triangles)
         print("Scene loaded!")
