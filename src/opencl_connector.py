@@ -12,7 +12,6 @@ class Connector(object):
         self.context = cl.Context(self.device)
         self.queue = cl.CommandQueue(self.context)
         self.program = self.build_program(filename)
-        self.tools = self.build_program("kernels/tools.cl")
         self.width = width
         self.height = height
         self.noise = np.int32(noise)
@@ -119,6 +118,9 @@ class Connector(object):
         with open(filename) as f:
             code = f.read()
 
+        with open("kernels/tools.cl") as f:
+            code += f.read()
+
         return cl.Program(self.context, code).build()
 
     def get_if_finished(self):
@@ -168,7 +170,7 @@ class Connector(object):
             cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR,
             hostbuf=image)
 
-        self.tools.get_means(
+        self.program.get_means(
             self.queue,
             (np.int32(self.width/self.noise), np.int32(self.height)),
             None,

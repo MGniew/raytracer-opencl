@@ -112,7 +112,7 @@ class Engine(object):
             image = self.connector.get_if_finished()
             if image is not None:
                 try:
-                    image = self.denoiser.denoise(image, self.connector)
+                    # image = self.denoiser.denoise(image, self.connector)
                     self.parent_conn.send(image.tobytes())
                 except BrokenPipeError:
                     self.running = False
