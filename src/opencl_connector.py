@@ -2,9 +2,6 @@ import numpy as np
 import pyopencl as cl
 from PIL import Image
 
-from src.material import Material
-from src.objects.triangle import Triangle
-
 
 class Connector(object):
 
@@ -121,6 +118,9 @@ class Connector(object):
         with open(filename) as f:
             code = f.read()
 
+        with open("kernels/tools.cl") as f:
+            code += f.read()
+
         return cl.Program(self.context, code).build()
 
     def get_if_finished(self):
@@ -162,3 +162,21 @@ class Connector(object):
                     callback)
 
         self.queue.flush()
+
+    def run_denoise(self, image):
+
+        input_buf = cl.Buffer(
+            self.context,
+            cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR,
+            hostbuf=image)
+
+        self.program.get_means(
+            self.queue,
+            (np.int32(self.width/self.noise), np.int32(self.height)),
+            None,
+            input_buf)
+
+        self.queue.flush()
+        self.queue.finish()
+        cl.enqueue_copy(self.queue, image, input_buf)
+        return image
