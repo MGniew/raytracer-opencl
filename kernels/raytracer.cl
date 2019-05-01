@@ -169,8 +169,6 @@ float3 getTriangleColor(
                 triangle->normalC * abArea) / tArea;
 
     float3 diffuse = triangle->material.diffuse;
-    printf("trolosdadaslo\n"); 
-    printf("%f\n", triangle->material.texture_num); 
     if (triangle->material.texture_num >= 0.0f) {
 
         // float3 ba = triangle->pointB - triangle->pointA;
