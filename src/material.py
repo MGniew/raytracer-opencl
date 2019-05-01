@@ -30,6 +30,6 @@ class Material(object):
                         cl.array.vec.make_float3(*self.diffuse),
                         cl.array.vec.make_float3(*self.specular),
                         self.texture_num,
-                        [float(1)] * 3,
+                        [np.float32(1)] * 3,
                         ),
                         dtype=self.material_struct)

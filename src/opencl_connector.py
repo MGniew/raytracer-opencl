@@ -62,13 +62,18 @@ class Connector(object):
                  (0, 4 - image.shape[2])),
                 "constant") for image in images]
 
+        n_images = len(images)
+
+        print(max_width)
+        print(max_height)
+
         images = np.concatenate(images, 0)
         img_format = cl.ImageFormat(cl.channel_order.RGBA,
                                     cl.channel_type.UNORM_INT8)
         image = cl.Image(self.context,
                          cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR,
                          img_format, hostbuf=images.flatten(), is_array=True,
-                         shape=(max_width, max_height, 4),
+                         shape=(max_width, max_height, n_images),
                          pitches=(max_width * 4, max_width * max_height * 4)
                          )
 

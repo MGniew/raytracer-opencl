@@ -5,8 +5,7 @@ struct Material {
     float texture_num;
 }; 
 
-struct Texture {
-    uchar* data;
+struct Texture { uchar* data;
     int width;
     int height;
 };
@@ -170,7 +169,9 @@ float3 getTriangleColor(
                 triangle->normalC * abArea) / tArea;
 
     float3 diffuse = triangle->material.diffuse;
-    if (triangle->material.texture_num >= 0) {
+    printf("trolosdadaslo\n"); 
+    printf("%f\n", triangle->material.texture_num); 
+    if (triangle->material.texture_num >= 0.0f) {
 
         // float3 ba = triangle->pointB - triangle->pointA;
         // float3 ca = triangle->pointC - triangle->pointA;
@@ -359,5 +360,12 @@ __kernel void get_image(__constant struct Camera* camera,
     output[pixelY * pixelWidth * 3 + pixelX * 3 ] = convert_uchar(result.x * 255);
     output[pixelY * pixelWidth * 3 + pixelX * 3 + 1] = convert_uchar(result.y * 255);
     output[pixelY * pixelWidth * 3 + pixelX * 3 + 2] = convert_uchar(result.z * 255);
+   //     const sampler_t sampler = CLK_FILTER_NEAREST | CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE;
+   //     float4 result = read_imagef(
+   //             textures, sampler,
+   //             (float4)(pixelX, pixelY, 8, 0.0f));
+   // output[pixelY * pixelWidth * 3 + pixelX * 3 ] = convert_uchar(result.x * 255);
+   // output[pixelY * pixelWidth * 3 + pixelX * 3 + 1] = convert_uchar(result.y * 255);
+   // output[pixelY * pixelWidth * 3 + pixelX * 3 + 2] = convert_uchar(result.z * 255);
 
 }
