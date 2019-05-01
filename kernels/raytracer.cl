@@ -3,7 +3,6 @@ struct Material {
     float3 diffuse;
     float3 specular;
     float texture_num;
-    float pad[15];
 }; 
 
 struct Texture {
@@ -285,7 +284,7 @@ float3 trace(
 
     float3 color = (float3)(0,0,0);
     float mult = 1;
-    for (int j = 0; j < 3; j ++) {
+    for (int j = 0; j < 1; j ++) {
         float dist = zFar;
         __constant struct Sphere* sphere = getClosestSphere(spheres, n_spheres,
                                                  &dist, origin, direction);

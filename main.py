@@ -12,6 +12,8 @@ def get_args():
     parser.add_argument("--noise", type=int, default=1)
     parser.add_argument("--scene", type=str, default="scenes/scene.json")
     parser.add_argument("--obj", type=str, default=None)
+    parser.add_argument("--animation", action="store_true")
+    parser.add_argument("--record", action="store_true")
 
     return parser.parse_args()
 
@@ -25,7 +27,10 @@ def main():
         args.w,
         args.h,
         args.noise,
-        args.obj)
+        args.obj,
+        args.animation,
+        args.record,
+        args.no_gui)
     engine.run()
 
 

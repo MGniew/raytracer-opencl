@@ -38,6 +38,7 @@ class Connector(object):
                 v = textures[i]
                 if v is None:
                     continue
+                print(v)
                 image = self.load_image(v)
 
                 if image.shape[0] > max_height:
@@ -68,7 +69,8 @@ class Connector(object):
                          cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR,
                          img_format, hostbuf=images.flatten(), is_array=True,
                          shape=(max_width, max_height, 4),
-                         pitches=(max_width * 4, max_width * max_height * 4))
+                         pitches=(max_width * 4, max_width * max_height * 4)
+                         )
 
         self.textures = image
 
@@ -123,9 +125,10 @@ class Connector(object):
 
         return cl.Program(self.context, code).build()
 
-    def get_if_finished(self):
+    def get_result(self, wait):
 
-        if (self.event.get_info(cl.event_info.COMMAND_EXECUTION_STATUS) ==
+        if (wait or
+                self.event.get_info(cl.event_info.COMMAND_EXECUTION_STATUS) ==
                 cl.command_execution_status.COMPLETE):
             self.queue.finish()
             cl.enqueue_copy(self.queue, self.result, self.result_buf)

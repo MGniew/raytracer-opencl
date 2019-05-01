@@ -10,7 +10,7 @@ class Material(object):
          ("diffuse", cl.cltypes.float3),
          ("specular", cl.cltypes.float3),
          ("texture_num", np.float32),
-         ("padding", np.float32, 15)  # ugly sollution
+         ("padding", np.float32, 3)  # ugly sollution
          ])
 
     def __init__(
@@ -30,6 +30,6 @@ class Material(object):
                         cl.array.vec.make_float3(*self.diffuse),
                         cl.array.vec.make_float3(*self.specular),
                         self.texture_num,
-                        [1] * 15,
+                        [float(1)] * 3,
                         ),
                         dtype=self.material_struct)

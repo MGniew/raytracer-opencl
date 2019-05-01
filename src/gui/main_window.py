@@ -29,9 +29,9 @@ class MainWindow(Gtk.Window):
         self.connect("key-press-event", self.on_key_pressed)
         self.connect("key-release-event", self.on_key_released)
         GLib.io_add_watch(
-                self.child_conn,
+                GLib.IOChannel(self.child_conn.fileno()),
                 GLib.PRIORITY_DEFAULT_IDLE,
-                GLib.IOCondition(GLib.IO_IN),
+                GLib.IOCondition(1 | 8 | 16),
                 self.on_new_frame_ready,
                 None)
 
@@ -39,7 +39,7 @@ class MainWindow(Gtk.Window):
         self.fps = 0
 
     def on_new_frame_ready(self, source_object, result, user_data):
-        buff = source_object.recv()
+        buff = self.child_conn.recv()
         pixbuf = GdkPixbuf.Pixbuf.new_from_data(
                     buff,
                     GdkPixbuf.Colorspace.RGB, False,

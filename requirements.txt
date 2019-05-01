@@ -7,3 +7,4 @@ PyWavefront
 opencv-python
 Pillow
 sklearn
+pypng
