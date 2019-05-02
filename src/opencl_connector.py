@@ -60,12 +60,9 @@ class Connector(object):
                 ((0, max_height - image.shape[0]),
                  (0, max_width - image.shape[1]),
                  (0, 4 - image.shape[2])),
-                "constant") for image in images]
+                "wrap") for image in images]
 
         n_images = len(images)
-
-        print(max_width)
-        print(max_height)
 
         images = np.concatenate(images, 0)
         img_format = cl.ImageFormat(cl.channel_order.RGBA,

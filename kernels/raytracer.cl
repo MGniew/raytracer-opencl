@@ -185,12 +185,12 @@ float3 getTriangleColor(
         float v = (d11 * d20 - d01 * d21) / denom;
         float w = (d00 * d21 - d01 * d20) / denom;
         float u = 1 - v - w;
-        float3 coordinates = (triangle->textureA * u + triangle->textureB * v +
-           triangle->textureC * w);
+        float3 coordinates = (triangle->textureA/2048 * u + triangle->textureB/2048 * v +
+           triangle->textureC/2048 * w);
 
         //float3 coordinates = (triangle->textureA * bcArea + triangle->textureB * caArea +
         //   triangle->textureC * abArea) / tArea;
-        const sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_LINEAR;
+        const sampler_t sampler = CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_REPEAT | CLK_FILTER_LINEAR;
         float4 _diffuse = read_imagef(
                 textures, sampler,
                 (float4)(coordinates.x, coordinates.y, triangle->material.texture_num, 0.0f));
