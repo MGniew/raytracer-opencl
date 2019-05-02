@@ -97,33 +97,47 @@ class Scene(object):
         return data
 
     def load_from_mesh(self, filename):
-        # shininess...
-        # emissive...
-        # transparency...
+
+        textures = {None: (-1, 0, 0)}
+        texture_num = 0
+        num_triangles = 0
+
+        def load_texture(texture):
+            nonlocal texture_num
+            if texture:
+                if texture.path not in textures:
+                    height, width, _ = self.load_image(texture.path).shape
+                    textures[texture.path] = (texture_num, width, height)
+                    texture_num += 1
+                return textures[texture.path]
+            return (-1, 0, 0)
 
         scene = pywavefront.Wavefront(filename, collect_faces=True,
                                       create_materials=True)
-        textures = {None: -1}
-        texture_num = 0
-        texture_path = None
-        width, height = 0, 0
-        num_triangles = 0
         for name, material in scene.materials.items():
-            if material.texture and material.texture.path not in textures:
-                texture_path = material.texture.path
-                height, width, _ = self.load_image(texture_path).shape
-                textures[material.texture.path] = texture_num
-                texture_num += 1
+
+            diff_texture = load_texture(material.texture)
+            ambi_texture = load_texture(material.texture_ambient)
+            spec_texture = load_texture(material.texture_specular_color)
+            bump_texture = load_texture(material.texture_bump)
+
             mat = Material(
                     material.ambient,
                     material.diffuse,
                     material.specular,
-                    textures[texture_path])
+                    material.emissive,
+                    material.transparency,
+                    material.optical_density,
+                    material.shininess,
+                    texture_diffuse=diff_texture,
+                    texture_ambient=ambi_texture,
+                    texture_specular_color=spec_texture,
+                    texture_bump=bump_texture)
 
             for triangle in self.triangle_gen(
                     material.vertices,
                     material.vertex_format,
-                    mat, width, height):
+                    mat, diff_texture[1], diff_texture[2]):
                 self.add_object(triangle)
                 num_triangles += 1
 

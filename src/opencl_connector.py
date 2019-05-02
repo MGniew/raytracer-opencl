@@ -31,6 +31,7 @@ class Connector(object):
         max_width = 0
         max_height = 0
         if self.scene.textures:
+            textures = {k: v[0] for k, v in self.scene.textures.items()}
             textures = {v: k for k, v in self.scene.textures.items()}
 
             for i in sorted(textures.keys()):

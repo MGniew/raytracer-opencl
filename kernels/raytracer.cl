@@ -2,7 +2,15 @@ struct Material {
     float3 ambience;
     float3 diffuse;
     float3 specular;
-    float texture_num;
+    float3 emissive;
+    float3 texture_ambient;
+    float3 texture_diffuse;
+    float3 texture_specular;
+    float3 texture_bump;
+    float transparency;
+    float density;
+    float shininess;
+    float pad;
 }; 
 
 struct Texture { uchar* data;
@@ -170,7 +178,7 @@ float3 getTriangleColor(
 
     //float3 diffuse = triangle->material.diffuse;
     float3 diffuse = (float3)(0.0f, 0.0f, 0.0f);
-    if (triangle->material.texture_num >= 0.0f) {
+    if (triangle->material.texture_diffuse.x >= 0.0f) {
 
         float3 ba = triangle->pointB - triangle->pointA;
         float3 ca = triangle->pointC - triangle->pointA;
@@ -204,7 +212,7 @@ float3 getTriangleColor(
         const sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_REPEAT | CLK_FILTER_LINEAR;
         float4 _diffuse = read_imagef(
                 textures, sampler,
-                (float4)(coordinates.x, coordinates.y, triangle->material.texture_num, 0.0f));
+                (float4)(coordinates.x, coordinates.y, triangle->material.texture_ambient.x, 0.0f));
         diffuse = (float3)(_diffuse.x, _diffuse.y, _diffuse.z);
         return diffuse;
     }
