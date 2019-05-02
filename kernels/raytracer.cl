@@ -23,9 +23,9 @@ struct Triangle {
     float3 normalA;
     float3 normalB;
     float3 normalC;
-    float3 textureA;
-    float3 textureB;
-    float3 textureC;
+    float4 textureA;
+    float4 textureB;
+    float4 textureC;
     struct Material material;
 };
 
@@ -185,12 +185,25 @@ float3 getTriangleColor(
         float v = (d11 * d20 - d01 * d21) / denom;
         float w = (d00 * d21 - d01 * d20) / denom;
         float u = 1 - v - w;
-        float3 coordinates = (triangle->textureA/2048 * u + triangle->textureB/2048 * v +
-           triangle->textureC/2048 * w);
+        float4 coordinates = (triangle->textureA * u + triangle->textureB * v + triangle->textureC * w);
+        coordinates.x = coordinates.x * triangle->textureA.z;
+        coordinates.y = coordinates.y * triangle->textureA.w;
+        if (coordinates.x < 0) {
+            coordinates.x += triangle->textureA.z;
+        }
+        else if (coordinates.x > triangle->textureA.z) {
+            coordinates.x -= triangle->textureA.z;
+        }
+        if (coordinates.y < 0) {
+            coordinates.y += triangle->textureA.w;
+        }
+        else if (coordinates.y > triangle->textureA.w) {
+            coordinates.y -= triangle->textureA.w;
+        }
 
         //float3 coordinates = (triangle->textureA * bcArea + triangle->textureB * caArea +
         //   triangle->textureC * abArea) / tArea;
-        const sampler_t sampler = CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_REPEAT | CLK_FILTER_LINEAR;
+        const sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_REPEAT | CLK_FILTER_LINEAR;
         float4 _diffuse = read_imagef(
                 textures, sampler,
                 (float4)(coordinates.x, coordinates.y, triangle->material.texture_num, 0.0f));

@@ -101,13 +101,14 @@ class Connector(object):
             self.n_spheres = np.int32(len(self.scene.get_objects("Sphere")))
         else:
             self.n_spheres = np.int32(0)
+
+        triangles = self.scene.get_objects("Triangle")
         self.triangles_d = cl.Buffer(
             self.context,
             cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR,
-            hostbuf=np.array(self.scene.get_objects("Triangle")))
-        if self.scene.get_objects("Triangle"):
-            self.n_triangles = np.int32(
-                    len(self.scene.get_objects("Triangle")))
+            hostbuf=np.array(triangles))
+        if triangles:
+            self.n_triangles = np.int32(len(triangles))
         else:
             self.n_triangles = np.int32(0)
 

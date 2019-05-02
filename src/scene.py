@@ -67,7 +67,7 @@ class Scene(object):
                 for el in formats:
                     if el == "T2F":
                         texture_coord.append(
-                                np.array([x[0] * width, height - x[1] * height]))
+                                np.array([x[0], 1 - x[1], width, height]))
                         x = x[2:]
                     elif el == "C3F":
                         x = x[3:]

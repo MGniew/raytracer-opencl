@@ -10,7 +10,7 @@ class Triangle(VisibleObject):
     triangle_struct = np.dtype(
         [("vertices", cl.cltypes.float3, 3),
          ("normals", cl.cltypes.float3, 3),
-         ("triangles", cl.cltypes.float3, 3)])
+         ("textures", cl.cltypes.float4, 3)])
 
     def __init__(self, material, vertices, normals=None, texture_coord=None):
         super(Triangle, self).__init__(material)
@@ -35,7 +35,7 @@ class Triangle(VisibleObject):
         a = np.array(
             ([cl.array.vec.make_float3(*el) for el in self.vertices],
              [cl.array.vec.make_float3(*el) for el in self.normals],
-             [cl.array.vec.make_float3(*el) for el in self.texture_coord]),
+             [cl.array.vec.make_float4(*el) for el in self.texture_coord]),
             dtype=self.triangle_struct)
 
         return a
