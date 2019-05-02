@@ -188,19 +188,17 @@ float3 getTriangleColor(
         float4 coordinates = (triangle->textureA * u + triangle->textureB * v + triangle->textureC * w);
         coordinates.x = coordinates.x * triangle->textureA.z;
         coordinates.y = coordinates.y * triangle->textureA.w;
-        if (coordinates.x < 0) {
-            coordinates.x += triangle->textureA.z;
-        }
-        else if (coordinates.x > triangle->textureA.z) {
-            coordinates.x -= triangle->textureA.z;
-        }
-        if (coordinates.y < 0) {
-            coordinates.y += triangle->textureA.w;
-        }
-        else if (coordinates.y > triangle->textureA.w) {
-            coordinates.y -= triangle->textureA.w;
-        }
 
+        if (coordinates.x > 0) {
+            coordinates.x = fmod(coordinates.x, triangle->textureA.z);
+        } else {
+            coordinates.x -= triangle->textureA.z * floor(coordinates.x/triangle->textureA.z);
+        }
+        if (coordinates.y > 0) {
+            coordinates.y = fmod(coordinates.y, triangle->textureA.w);
+        } else {
+            coordinates.y -= triangle->textureA.w * floor(coordinates.y/triangle->textureA.w);
+        }
         //float3 coordinates = (triangle->textureA * bcArea + triangle->textureB * caArea +
         //   triangle->textureC * abArea) / tArea;
         const sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_REPEAT | CLK_FILTER_LINEAR;
