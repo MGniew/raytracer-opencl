@@ -168,30 +168,46 @@ float3 getTriangleColor(
     *normalVector = (triangle->normalA * bcArea + triangle->normalB * caArea + 
                 triangle->normalC * abArea) / tArea;
 
-    float3 diffuse = triangle->material.diffuse;
+    //float3 diffuse = triangle->material.diffuse;
+    float3 diffuse = (float3)(0.0f, 0.0f, 0.0f);
     if (triangle->material.texture_num >= 0.0f) {
 
-        // float3 ba = triangle->pointB - triangle->pointA;
-        // float3 ca = triangle->pointC - triangle->pointA;
-        // float3 pa = crossPoint - triangle->pointA;
+        float3 ba = triangle->pointB - triangle->pointA;
+        float3 ca = triangle->pointC - triangle->pointA;
+        float3 pa = crossPoint - triangle->pointA;
 
-        // float d00 = dot(ba, ba);
-        // float d01 = dot(ba, ca);
-        // float d11 = dot(ca, ca);
-        // float d20 = dot(pa, ba);
-        // float d21 = dot(pa, ca);
-        // float denom = d00 * d11 - d01 * d01;
-        // float v = (d11 * d20 - d01 * d21) / denom;
-        // float w = (d00 * d21 - d01 * d20) / denom;
-        // float u = 1 - v - w;
+        float d00 = dot(ba, ba);
+        float d01 = dot(ba, ca);
+        float d11 = dot(ca, ca);
+        float d20 = dot(pa, ba);
+        float d21 = dot(pa, ca);
+        float denom = d00 * d11 - d01 * d01;
+        float v = (d11 * d20 - d01 * d21) / denom;
+        float w = (d00 * d21 - d01 * d20) / denom;
+        float u = 1 - v - w;
+        float3 coordinates = (triangle->textureA * u + triangle->textureB * v +
+           triangle->textureC * w);
 
-        float3 coordinates = (triangle->textureA * bcArea + triangle->textureB * caArea +
-            triangle->textureC * abArea) / tArea;
-        const sampler_t sampler = CLK_FILTER_NEAREST | CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE;
+        //float3 coordinates = (triangle->textureA * bcArea + triangle->textureB * caArea +
+        //   triangle->textureC * abArea) / tArea;
+        const sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE;
         float4 _diffuse = read_imagef(
                 textures, sampler,
                 (float4)(coordinates.x, coordinates.y, triangle->material.texture_num, 0.0f));
-        diffuse = (float3)(_diffuse.x, _diffuse.y, _diffuse.z);
+         _diffuse += read_imagef(
+                textures, sampler,
+                (float4)(coordinates.x + 0.05, coordinates.y + 0.05, triangle->material.texture_num, 0.0f));
+         _diffuse += read_imagef(
+                textures, sampler,
+                (float4)(coordinates.x + 0.05, coordinates.y - 0.05, triangle->material.texture_num, 0.0f));
+         _diffuse += read_imagef(
+                textures, sampler,
+                (float4)(coordinates.x - 0.05, coordinates.y + 0.05, triangle->material.texture_num, 0.0f));
+         _diffuse += read_imagef(
+                textures, sampler,
+                (float4)(coordinates.x - 0.05, coordinates.y - 0.05, triangle->material.texture_num, 0.0f));
+        diffuse = (float3)(_diffuse.x, _diffuse.y, _diffuse.z)/5;
+        return diffuse;
     }
 
 
