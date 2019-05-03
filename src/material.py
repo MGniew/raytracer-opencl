@@ -17,7 +17,7 @@ class Material(object):
          ("transparency", np.float32),
          ("optical_density", np.float32),
          ("shininess", np.float32),
-         ("padding", np.float32)  # ugly sollution
+         ("reflectiveness", np.float32)  # ugly sollution
          ])
 
     def __init__(
@@ -29,6 +29,7 @@ class Material(object):
             transparency=1,
             optical_density=1,
             shininess=0.1,
+            reflectiveness=0,
             texture_diffuse=(-1, 0, 0),
             texture_ambient=(-1, 0, 0),
             texture_specular_color=(-1, 0, 0),
@@ -42,6 +43,7 @@ class Material(object):
         self.transparency = transparency
         self.optical_density = optical_density
         self.shininess = shininess
+        self.reflectiveness = reflectiveness
         self.texture_diffuse = texture_diffuse
         self.texture_ambient = texture_ambient
         self.texture_specular = texture_specular_color
@@ -60,5 +62,5 @@ class Material(object):
                         self.transparency,
                         self.optical_density,
                         self.shininess,
-                        self.shininess),
+                        self.reflectiveness),
                         dtype=self.material_struct)

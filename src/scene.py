@@ -115,11 +115,13 @@ class Scene(object):
         scene = pywavefront.Wavefront(filename, collect_faces=True,
                                       create_materials=True)
         for name, material in scene.materials.items():
+            print(material.__dict__)
 
             diff_texture = load_texture(material.texture)
             ambi_texture = load_texture(material.texture_ambient)
             spec_texture = load_texture(material.texture_specular_color)
             bump_texture = load_texture(material.texture_bump)
+            reflectiveness = 0
 
             mat = Material(
                     material.ambient,
@@ -129,6 +131,7 @@ class Scene(object):
                     material.transparency,
                     material.optical_density,
                     material.shininess,
+                    reflectiveness,
                     texture_diffuse=diff_texture,
                     texture_ambient=ambi_texture,
                     texture_specular_color=spec_texture,

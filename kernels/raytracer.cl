@@ -10,7 +10,7 @@ struct Material {
     float transparency;
     float density;
     float shininess;
-    float pad;
+    float reflectiveness;
 }; 
 
 struct Texture { uchar* data;
