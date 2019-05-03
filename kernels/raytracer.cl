@@ -61,27 +61,25 @@ struct RayTask {
     float depth;
 };
 
-int push(__private void** stack, void* value) {
+void push(__private uint* stack, uint value) {
 
-    uint bufLen = 8;
-    uint nextIndex=*((int*)stack[0])%bufLen+2;
+    uint bufLen = 64;
+    uint nextIndex=stack[0]%bufLen+2;
     stack[nextIndex]=value;
-    *((int*)stack[0]) += 1;
-    return 1;
+    stack[0] += 1;
 }
 
-int empty(__private void** stack) {
-    if (*((int*)stack[0]) == *((int*)stack[1]))
-        return 1;
-    return 0;
+bool empty(__private uint* stack) {
+    return (stack[0] == stack[1]);
 }
 
-void* pop(__private void** stack)
+uint pop(__private uint* stack)
 {
-    uint bufLen=8;
-    uint ptr=*((int*)stack[1])%bufLen+2;
-    void* returnValue=stack[ptr];
-    *((int*)stack[1]) += 1;
+    uint bufLen=64;
+    uint ptr=stack[1]%bufLen+2;
+    uint returnValue=stack[ptr];
+    stack[ptr]=0;
+    stack[1] += 1;
     return returnValue;
 }
 
@@ -110,6 +108,24 @@ float intersect_sphere(
         distance = -b + delta;
     }
     return distance;
+}
+
+void push_struct(uint *stack, struct RayTask task) {
+    uint* p = (uint*)&task;
+    for (int i = 0; i < sizeof(struct RayTask) / 4; i++) {
+        push(stack, p[i]);
+        printf("in %u\n", p[i]);
+    }
+}
+
+struct RayTask pop_struct(uint *stack) {
+    uint p[sizeof(struct RayTask) / 4];
+    for (int i = 0; i < sizeof(struct RayTask) / 4; i++) {
+        p[i] = pop(stack);
+        printf("out %u\n", p[i]);
+    }
+
+    return *((struct RayTask*)p);
 }
 
 float intersect_triagle(
@@ -343,26 +359,23 @@ float3 trace(
         read_only image2d_array_t textures){
 
 
-    float3 color = (float3)(0,0,0);
+    float3 color = (float3)(1,0,0);
     float mult = 1;
     float depth = 0;
-    __private void* heap[10];
-    int h1 = 0;
-    int h2 = 0;
-    heap[0] = &h1;
-    heap[1] = &h2;
+    uint stack[100];
+    printf("direction = %2.2v3hlf\n", direction);
     struct RayTask task = {direction, origin, mult, depth};
-    push(heap, &task);
+    push_struct(stack, task);
+    task = pop_struct(stack);
+    origin = task.origin;
+    direction = task.direction;
+    printf("direction2 = %2.2v3hlf\n", direction);
 
-    //origin = taskptr->origin;
-    //direction = taskptr->direction;
-    while (empty(heap) == 0) {
-    //for (int i =0; i < 1; i++) {   
-        struct RayTask* taskptr = (struct RayTask*)pop(heap);
-        origin = taskptr->origin;
-        direction = taskptr->direction;
-        mult = taskptr->mult;
-        depth = taskptr->depth;
+    while (empty(stack) == 1) {
+        task = pop_struct(stack);
+        origin = task.origin;
+        direction = task.direction;
+        printf("direction2 = %2.2v3hlf\n", direction);
 
         float dist = zFar;
         __constant struct Sphere* sphere = getClosestSphere(spheres, n_spheres,
