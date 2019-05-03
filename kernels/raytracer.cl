@@ -54,18 +54,37 @@ struct Light {
     float3 specular;
 };
 
-float3 getCameraRay(
-        __constant struct Camera* camera,
-        const int pixelX,
-        const int pixelY,
-        const int pixelWidth,
-        const int pixelHeight) { 
-    float distanceX = pixelX/(float)pixelWidth;
-    float distanceY = pixelY/(float)pixelHeight;
-    float3 worldPixel = camera->topLeftCorner + distanceX * camera->worldWidth * camera->rightVector;
-    worldPixel -= distanceY * camera->worldHeight * camera->upVector;
-    return normalize(worldPixel - camera->position);
+struct RayTask {
+    float3 direction;
+    float3 origin;
+    float mult;
+    float depth;
+};
+
+int push(__private void** stack, void* value) {
+
+    uint bufLen = 8;
+    uint nextIndex=*((int*)stack[0])%bufLen+2;
+    stack[nextIndex]=value;
+    *((int*)stack[0]) += 1;
+    return 1;
 }
+
+int empty(__private void** stack) {
+    if (*((int*)stack[0]) == *((int*)stack[1]))
+        return 1;
+    return 0;
+}
+
+void* pop(__private void** stack)
+{
+    uint bufLen=8;
+    uint ptr=*((int*)stack[1])%bufLen+2;
+    void* returnValue=stack[ptr];
+    *((int*)stack[1]) += 1;
+    return returnValue;
+}
+
 
 float intersect_sphere(
         __constant struct Sphere* sphere,
@@ -242,9 +261,7 @@ float3 getTriangleColor(
                 triangle->material.ambience * lights[i].ambience;
         }
     }
-
     return resultColor;
-
 
 }
 
@@ -291,6 +308,28 @@ __constant struct Triangle* getClosestTriangle(
 }
 
 
+float3 get_reflected_ray(float3 direction, float3 normalVector) {
+    float n_dot_l = dot(direction, normalVector);
+    return normalize(direction - normalVector * 2*n_dot_l);
+}
+
+float3 get_refracted_ray(float3 direction, float3 normalVector, float a, float b) {
+    float cosa = dot(direction, normalVector);
+    if (cosa > 0){
+        cosa = -cosa;
+    }
+    else {
+        float temp;
+        temp = a;
+        a = b;
+        b = temp;
+        normalVector = -1 * normalVector;
+    }
+    float r = a/b;
+    float k = 1 - r*r * (1 - cosa*cosa);
+    return direction*r + normalVector*(r*cosa - sqrt(k));
+}
+
 float3 trace(
         float3 origin,
         float3 direction,
@@ -306,7 +345,25 @@ float3 trace(
 
     float3 color = (float3)(0,0,0);
     float mult = 1;
-    for (int j = 0; j < 1; j ++) {
+    float depth = 0;
+    __private void* heap[10];
+    int h1 = 0;
+    int h2 = 0;
+    heap[0] = &h1;
+    heap[1] = &h2;
+    struct RayTask task = {direction, origin, mult, depth};
+    push(heap, &task);
+
+    //origin = taskptr->origin;
+    //direction = taskptr->direction;
+    while (empty(heap) == 0) {
+    //for (int i =0; i < 1; i++) {   
+        struct RayTask* taskptr = (struct RayTask*)pop(heap);
+        origin = taskptr->origin;
+        direction = taskptr->direction;
+        mult = taskptr->mult;
+        depth = taskptr->depth;
+
         float dist = zFar;
         __constant struct Sphere* sphere = getClosestSphere(spheres, n_spheres,
                                                  &dist, origin, direction);
@@ -316,14 +373,31 @@ float3 trace(
         __private float3 normalVector;
         if (triangle) {
             origin = origin + direction * dist;
-            color += mult * getTriangleColor(
-                    triangle,
-                    lights,
-                    nLights,
-                    origin,
-                    direction,
-                    &normalVector,
-                    textures);
+            float3 phongColor = (float3)(0, 0, 0);
+            if (triangle->material.transparency > 0) {
+                //refract
+                if (triangle->material.transparency < 1) {
+                    //reflect
+                }
+            } else if (triangle->material.reflectiveness > 0) {
+                //reflect
+                if (triangle->material.reflectiveness < 1) {
+                    phongColor = mult * getTriangleColor(triangle, lights,
+                            nLights,
+                            origin,
+                            direction,
+                            &normalVector,
+                            textures);
+                }
+            } else {
+                phongColor = mult * getTriangleColor(triangle, lights,
+                        nLights,
+                        origin,
+                        direction,
+                        &normalVector,
+                        textures);
+            }
+
         }
         else if (sphere){
             origin = origin + direction * dist;
@@ -340,10 +414,22 @@ float3 trace(
             break;
         }
         mult *= 0.25f;
-        float n_dot_l = dot(direction, normalVector);
-        direction = normalize(direction - normalVector * 2*n_dot_l);
+        direction = get_reflected_ray(direction, normalVector);
     }
     return color;
+}
+
+float3 getCameraRay(
+        __constant struct Camera* camera,
+        const int pixelX,
+        const int pixelY,
+        const int pixelWidth,
+        const int pixelHeight) { 
+    float distanceX = pixelX/(float)pixelWidth;
+    float distanceY = pixelY/(float)pixelHeight;
+    float3 worldPixel = camera->topLeftCorner + distanceX * camera->worldWidth * camera->rightVector;
+    worldPixel -= distanceY * camera->worldHeight * camera->upVector;
+    return normalize(worldPixel - camera->position);
 }
 
 __kernel void get_image(__constant struct Camera* camera,
@@ -381,12 +467,4 @@ __kernel void get_image(__constant struct Camera* camera,
     output[pixelY * pixelWidth * 3 + pixelX * 3 ] = convert_uchar(result.x * 255);
     output[pixelY * pixelWidth * 3 + pixelX * 3 + 1] = convert_uchar(result.y * 255);
     output[pixelY * pixelWidth * 3 + pixelX * 3 + 2] = convert_uchar(result.z * 255);
-   //     const sampler_t sampler = CLK_FILTER_NEAREST | CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE;
-   //     float4 result = read_imagef(
-   //             textures, sampler,
-   //             (float4)(pixelX, pixelY, 8, 0.0f));
-   // output[pixelY * pixelWidth * 3 + pixelX * 3 ] = convert_uchar(result.x * 255);
-   // output[pixelY * pixelWidth * 3 + pixelX * 3 + 1] = convert_uchar(result.y * 255);
-   // output[pixelY * pixelWidth * 3 + pixelX * 3 + 2] = convert_uchar(result.z * 255);
-
 }
