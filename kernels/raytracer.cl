@@ -478,11 +478,51 @@ float3 getCameraRay(
         const int pixelX,
         const int pixelY,
         const int pixelWidth,
-        const int pixelHeight) { 
+        const int pixelHeight,
+        const int sample) { 
     float distanceX = pixelX/(float)pixelWidth;
     float distanceY = pixelY/(float)pixelHeight;
     float3 worldPixel = camera->topLeftCorner + distanceX * camera->worldWidth * camera->rightVector;
     worldPixel -= distanceY * camera->worldHeight * camera->upVector;
+
+    switch(sample) {
+
+        case 0:
+            break;
+
+        case 1:
+            worldPixel += 1/(2*(float)pixelWidth) * camera->worldHeight * camera->upVector;
+            worldPixel += 1/2*(float)pixelHeight * camera->worldWidth * camera->rightVector;
+            break;
+
+        case 2:
+            worldPixel -= 1/(2*(float)pixelWidth) * camera->worldHeight * camera->upVector;
+            worldPixel += 1/(2*(float)pixelHeight) * camera->worldWidth * camera->rightVector;
+            break;
+        case 3:
+            worldPixel += 1/(2*(float)pixelWidth) * camera->worldHeight * camera->upVector;
+            worldPixel -= 1/(2*(float)pixelHeight) * camera->worldWidth * camera->rightVector;
+            break;
+        case 4:
+            worldPixel -= 1/(2*(float)pixelWidth) * camera->worldHeight * camera->upVector;
+            worldPixel -= 1/(2*(float)pixelHeight) * camera->worldWidth * camera->rightVector;
+            break;
+        case 5:
+            worldPixel += 1/(2*(float)pixelWidth) * camera->worldHeight * camera->upVector;
+            break;
+        case 6:
+            worldPixel -= 1/(2*(float)pixelWidth) * camera->worldHeight * camera->upVector;
+            break;
+        case 7:
+            worldPixel += 1/(2*(float)pixelHeight) * camera->worldWidth * camera->rightVector;
+            break;
+        case 8:
+            worldPixel -= 1/(2*(float)pixelHeight) * camera->worldWidth * camera->rightVector;
+            break;
+
+
+    }
+
     return normalize(worldPixel - camera->position);
 }
 
@@ -507,15 +547,23 @@ __kernel void get_image(__constant struct Camera* camera,
         pixelX += pixelY % noise;
     }
 
-    float3 result = trace(camera->position,
-            getCameraRay(camera, pixelX,
-                pixelY, pixelWidth,
-                pixelHeight),
-            camera->zFar,
-            lights, nLights,
-            spheres, nSpheres,
-            triangles, nTriangles,
-            textures);
+    int samples = 9;
+    float3 result = (float3)(0.0f, 0.0f, 0.0f);
+
+    for(int i = 0; i < samples; i++) {
+
+    result += trace(camera->position,
+        getCameraRay(camera, pixelX,
+            pixelY, pixelWidth,
+            pixelHeight, i),
+        camera->zFar,
+        lights, nLights,
+        spheres, nSpheres,
+        triangles, nTriangles,
+        textures);
+    }
+
+    result  = result/samples;
 
     result = clamp(result, 0.0f, 1.0f);
     output[pixelY * pixelWidth * 3 + pixelX * 3 ] = convert_uchar(result.x * 255);
