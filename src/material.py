@@ -7,8 +7,7 @@ class Material(object):
 
     material_struct = np.dtype(
         [("ambience", cl.cltypes.float3),
-         ("diffuse", cl.cltypes.float3),
-         ("specular", cl.cltypes.float3),
+         ("diffuse", cl.cltypes.float3), ("specular", cl.cltypes.float3),
          ("emissive", cl.cltypes.float3),
          ("texture_ambient", cl.cltypes.float3),
          ("texture_diffuse", cl.cltypes.float3),
@@ -48,6 +47,9 @@ class Material(object):
         self.texture_ambient = texture_ambient
         self.texture_specular = texture_specular_color
         self.texture_bump = texture_bump
+
+        if self.transparency > 0:
+            self.reflectiveness = 1 - self.transparency
 
     def _get_cl_repr(self):
 

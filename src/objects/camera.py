@@ -23,7 +23,7 @@ class Camera(BaseObject):
             self,
             width=300,
             height=300,
-            position=[0, 1, 10],
+            position=[0, 1, 1],
             direction=[0, 0, -1],
             z_near=0.1,
             z_far=1000,

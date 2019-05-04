@@ -1,5 +1,5 @@
 struct Material {
-    float3 ambience;
+    float3 ambient;
     float3 diffuse;
     float3 specular;
     float3 emissive;
@@ -49,7 +49,7 @@ struct Camera {
 
 struct Light {
     float3 position;
-    float3 ambience;
+    float3 ambient;
     float3 diffuse;
     float3 specular;
 };
@@ -114,7 +114,6 @@ void push_struct(uint *stack, struct RayTask task) {
     uint* p = (uint*)&task;
     for (int i = 0; i < sizeof(struct RayTask) / 4; i++) {
         push(stack, p[i]);
-        printf("in %u\n", p[i]);
     }
 }
 
@@ -122,7 +121,6 @@ struct RayTask pop_struct(uint *stack) {
     uint p[sizeof(struct RayTask) / 4];
     for (int i = 0; i < sizeof(struct RayTask) / 4; i++) {
         p[i] = pop(stack);
-        printf("out %u\n", p[i]);
     }
 
     return *((struct RayTask*)p);
@@ -156,23 +154,27 @@ float intersect_triagle(
     return dist;
 }
 
+float3 getSphereNormal(__constant struct Sphere* sphere, __private float3 crossPoint) {
+    return normalize(crossPoint - sphere->position);
+}
+
 float3 getSphereColor(
         __constant struct Sphere* sphere,
         __constant struct Light* lights,
         __private int nLights,
         __private float3 crossPoint,
         __private float3 observationVector,
-        __private float3* normalVector) {
+        __private float3 normalVector) {
 
-    *normalVector = normalize(crossPoint - sphere->position);
-    if (dot(observationVector, *normalVector) < 0) {
-        *normalVector = - (*normalVector);
+    if (dot(observationVector, normalVector) < 0) {
+        normalVector = - (normalVector);
     }
-    float3 resultColor = sphere->material.ambience * (float3)(0.4f, 0.4f, 0.4f); // ...* global ambience
+
+    float3 resultColor = sphere->material.ambient * (float3)(0.4f, 0.4f, 0.4f); // ...* global ambient
     for (int i = 0; i < nLights; i++) {
         float3 lightVector = normalize(lights[i].position - crossPoint);
-        float n_dot_l = dot(lightVector, *normalVector);
-        float3 reflectionVector = normalize(lightVector - (*normalVector) * 2*n_dot_l);
+        float n_dot_l = dot(lightVector, normalVector);
+        float3 reflectionVector = normalize(lightVector - (normalVector) * 2*n_dot_l);
         float v_dot_r = dot(reflectionVector, observationVector);
         if (v_dot_r < 0) {
             v_dot_r = 0;
@@ -181,100 +183,136 @@ float3 getSphereColor(
         if(n_dot_l > 0.0001f) {//and no in shadow...
             resultColor += sphere->material.diffuse * lights[i].diffuse * n_dot_l +
                 sphere->material.specular * lights[i].specular * pow(v_dot_r, 30) + //specShin
-                sphere->material.ambience * lights[i].ambience;
+                sphere->material.ambient * lights[i].ambient;
         }
     }
     return resultColor;
 
 }
 
+float3 getTriangleNormal(
+        __constant struct Triangle* triangle,
+        __private float3 crossPoint,
+        __private float3 *barVector) {
+
+    float3 ba = triangle->pointB - triangle->pointA;
+    float3 ca = triangle->pointC - triangle->pointA;
+    float3 pa = crossPoint - triangle->pointA;
+
+    float d00 = dot(ba, ba);
+    float d01 = dot(ba, ca);
+    float d11 = dot(ca, ca);
+    float d20 = dot(pa, ba);
+    float d21 = dot(pa, ca);
+    float denom = d00 * d11 - d01 * d01;
+    float v = (d11 * d20 - d01 * d21) / denom;
+    float w = (d00 * d21 - d01 * d20) / denom;
+    float u = 1 - v - w;
+
+    barVector->x = u;
+    barVector->y = v;
+    barVector->z = w;
+
+    return normalize(triangle->normalA*u + triangle->normalB*v + triangle->normalC*w);
+}
+
+float3 getColorTexture(
+        float4 coordinates,
+        float3 texture,
+        read_only image2d_array_t textures) {
+
+    float width = texture.y;
+    float height = texture.z;
+    coordinates.x = coordinates.x * width;
+    coordinates.y = coordinates.y * height;
+
+    if (coordinates.x > 0) {
+        coordinates.x = fmod(coordinates.x, width);
+    } else {
+        coordinates.x -= width * floor(coordinates.x/width);
+    }
+    if (coordinates.y > 0) {
+        coordinates.y = fmod(coordinates.y, height);
+    } else {
+        coordinates.y -= height * floor(coordinates.y/height);
+    }
+
+    const sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_REPEAT | CLK_FILTER_LINEAR;
+    float4 _diffuse = read_imagef(
+            textures, sampler,
+            (float4)(coordinates.x, coordinates.y, texture.x, 0.0f));
+    return (float3)(_diffuse.x, _diffuse.y, _diffuse.z);
+}
+
+bool isInShadow(__constant struct Triangle* triangles,
+                float nTriangles,
+                float dist,
+                float3 direction,
+                float3 origin) {
+
+    for(int i = 0; i < nTriangles; i++) {
+        float tempDist = intersect_triagle(triangles + i, origin, direction);
+        if (tempDist > 0.0001f && tempDist < dist) {
+            return true;
+        }
+    }
+    return false;
+}
+
 float3 getTriangleColor(
+        __constant struct Triangle* triangles,
+        int nTriangles,
         __constant struct Triangle* triangle,
         __constant struct Light* lights,
         __private int nLights,
         __private float3 crossPoint,
         __private float3 observationVector,
-        __private float3* normalVector,
+        __private float3 normalVector,
+        __private float3 barVector,
         read_only image2d_array_t textures) {
 
-    float3 ab = triangle->pointA - triangle->pointB;
-    float3 bc = triangle->pointB - triangle->pointC;
-    float3 ca = triangle->pointC - triangle->pointA;
-    float3 ap = triangle->pointA - crossPoint;
-    float3 bp = triangle->pointB - crossPoint;
-    float abArea = length(cross(ab, ap))/2;
-    float bcArea = length(cross(bc, bp))/2;
-    float caArea = length(cross(ca, ap))/2;
+    float4 coordinates;
+    float3 diffuse = triangle->material.diffuse;
+    float3 specular = triangle->material.specular;
+    float3 ambient = triangle->material.ambient;
+    if (triangle->material.texture_diffuse.x >= 0.0f ||
+        triangle->material.texture_ambient.x >= 0.0f ||
+        triangle->material.texture_specular.x >= 0.0f) {
 
-    float tArea = length(cross(ab, bc))/2;
+        coordinates = (triangle->textureA * barVector.x + 
+                       triangle->textureB * barVector.y +
+                       triangle->textureC * barVector.z);
 
-    *normalVector = (triangle->normalA * bcArea + triangle->normalB * caArea + 
-                triangle->normalC * abArea) / tArea;
-
-    //float3 diffuse = triangle->material.diffuse;
-    float3 diffuse = (float3)(0.0f, 0.0f, 0.0f);
-    if (triangle->material.texture_diffuse.x >= 0.0f) {
-
-        float3 ba = triangle->pointB - triangle->pointA;
-        float3 ca = triangle->pointC - triangle->pointA;
-        float3 pa = crossPoint - triangle->pointA;
-
-        float d00 = dot(ba, ba);
-        float d01 = dot(ba, ca);
-        float d11 = dot(ca, ca);
-        float d20 = dot(pa, ba);
-        float d21 = dot(pa, ca);
-        float denom = d00 * d11 - d01 * d01;
-        float v = (d11 * d20 - d01 * d21) / denom;
-        float w = (d00 * d21 - d01 * d20) / denom;
-        float u = 1 - v - w;
-        float4 coordinates = (triangle->textureA * u + triangle->textureB * v + triangle->textureC * w);
-        coordinates.x = coordinates.x * triangle->textureA.z;
-        coordinates.y = coordinates.y * triangle->textureA.w;
-
-        if (coordinates.x > 0) {
-            coordinates.x = fmod(coordinates.x, triangle->textureA.z);
-        } else {
-            coordinates.x -= triangle->textureA.z * floor(coordinates.x/triangle->textureA.z);
+        if (triangle->material.texture_diffuse.x >= 0.0f) {
+            diffuse *= getColorTexture(coordinates, triangle->material.texture_diffuse, textures);
         }
-        if (coordinates.y > 0) {
-            coordinates.y = fmod(coordinates.y, triangle->textureA.w);
-        } else {
-            coordinates.y -= triangle->textureA.w * floor(coordinates.y/triangle->textureA.w);
+        if (triangle->material.texture_ambient.x >= 0.0f) {
+            ambient *= getColorTexture(coordinates, triangle->material.texture_ambient, textures);
         }
-        //float3 coordinates = (triangle->textureA * bcArea + triangle->textureB * caArea +
-        //   triangle->textureC * abArea) / tArea;
-        const sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_REPEAT | CLK_FILTER_LINEAR;
-        float4 _diffuse = read_imagef(
-                textures, sampler,
-                (float4)(coordinates.x, coordinates.y, triangle->material.texture_ambient.x, 0.0f));
-        diffuse = (float3)(_diffuse.x, _diffuse.y, _diffuse.z);
-        return diffuse;
+        if (triangle->material.texture_specular.x >= 0.0f) {
+            specular *= getColorTexture(coordinates, triangle->material.texture_specular, textures);
+        }
     }
 
-
-    *normalVector = normalize(*normalVector);
-
-    if (dot(observationVector, *normalVector) < 0) {
-        *normalVector = - (*normalVector); 
+    if (dot(observationVector, normalVector) < 0) {
+        normalVector = -normalVector; 
     }
 
-    //float3 resultColor = triangle->material.ambience * (float3)(0.4f, 0.4f, 0.4f); // ...* global ambience
-    float3 resultColor = diffuse; // ...* global ambience
-
+    float3 resultColor = ambient;
     for (int i = 0; i < nLights; i++) {
         float3 lightVector = normalize(lights[i].position - crossPoint);
-        float n_dot_l = dot(lightVector, *normalVector);
-        float3 reflectionVector = normalize(lightVector - *normalVector * 2*n_dot_l);
-        float v_dot_r = dot(reflectionVector, observationVector);
-        if (v_dot_r < 0) {
-            v_dot_r = 0;
-        }
+        float n_dot_l = dot(lightVector, normalVector);
+        float3 reflectionVector = normalize(-lightVector - normalVector * 2*n_dot_l);
 
-        if(n_dot_l > 0.0001f) {//and no in shadow...
+        float dist = distance(crossPoint, lights[i].position);
+        if(n_dot_l > 0.0001f && !isInShadow(triangles, nTriangles, dist, lightVector, crossPoint)) {
+            float v_dot_r = dot(reflectionVector, observationVector);
+            if (v_dot_r < 0) {
+                v_dot_r = 0;
+            }
             resultColor += diffuse * lights[i].diffuse * n_dot_l +
-                triangle->material.specular * lights[i].specular * pow(v_dot_r, 30) + //specShin
-                triangle->material.ambience * lights[i].ambience;
+                specular * lights[i].specular * pow(v_dot_r, triangle->material.shininess) + //specShin
+                ambient * lights[i].ambient;
         }
     }
     return resultColor;
@@ -330,20 +368,18 @@ float3 get_reflected_ray(float3 direction, float3 normalVector) {
 }
 
 float3 get_refracted_ray(float3 direction, float3 normalVector, float a, float b) {
+    float r;
     float cosa = dot(direction, normalVector);
-    if (cosa > 0){
+    if (cosa < 0) {
         cosa = -cosa;
+        r = b/a;
     }
     else {
-        float temp;
-        temp = a;
-        a = b;
-        b = temp;
-        normalVector = -1 * normalVector;
+        normalVector = -normalVector;
+        r = a/b;
     }
-    float r = a/b;
     float k = 1 - r*r * (1 - cosa*cosa);
-    return direction*r + normalVector*(r*cosa - sqrt(k));
+    return normalize(direction*r + normalVector*(r*cosa - sqrt(k)));
 }
 
 float3 trace(
@@ -358,24 +394,22 @@ float3 trace(
         const int n_triangles,
         read_only image2d_array_t textures){
 
-
-    float3 color = (float3)(1,0,0);
+    float3 color = (float3)(0,0,0);
     float mult = 1;
     float depth = 0;
     uint stack[100];
-    printf("direction = %2.2v3hlf\n", direction);
+    stack[0] = 0;
+    stack[1] = 0;
+
     struct RayTask task = {direction, origin, mult, depth};
     push_struct(stack, task);
-    task = pop_struct(stack);
-    origin = task.origin;
-    direction = task.direction;
-    printf("direction2 = %2.2v3hlf\n", direction);
 
-    while (empty(stack) == 1) {
+    while(!empty(stack)) {   
         task = pop_struct(stack);
         origin = task.origin;
         direction = task.direction;
-        printf("direction2 = %2.2v3hlf\n", direction);
+        depth = task.depth;
+        mult = task.mult;
 
         float dist = zFar;
         __constant struct Sphere* sphere = getClosestSphere(spheres, n_spheres,
@@ -384,46 +418,53 @@ float3 trace(
                                                  &dist, origin, direction);
 
         __private float3 normalVector;
+        float3 phongColor = (float3)(0, 0, 0);
+        origin = origin + direction * dist;
+
         if (triangle) {
-            origin = origin + direction * dist;
-            float3 phongColor = (float3)(0, 0, 0);
+            float3 barVector;
+            normalVector = getTriangleNormal(triangle, origin, &barVector);
+
             if (triangle->material.transparency > 0) {
-                //refract
-                if (triangle->material.transparency < 1) {
-                    //reflect
+                float3 new_ray = get_refracted_ray(direction, normalVector, triangle->material.density, 1.0f);
+                if (depth < 3 && mult * triangle->material.transparency > 0.05) {
+                    struct RayTask task = {new_ray, origin, mult * triangle->material.transparency, depth+1};
+                    push_struct(stack, task);
                 }
-            } else if (triangle->material.reflectiveness > 0) {
-                //reflect
-                if (triangle->material.reflectiveness < 1) {
-                    phongColor = mult * getTriangleColor(triangle, lights,
-                            nLights,
-                            origin,
-                            direction,
-                            &normalVector,
-                            textures);
+            }
+            if (triangle->material.reflectiveness > 0) {
+                float3 new_ray = get_reflected_ray(direction, normalVector);
+                if (depth < 2 && mult * triangle->material.reflectiveness > 0.05) {
+                    struct RayTask task = {new_ray, origin, mult * triangle->material.reflectiveness, depth+1};
+                    push_struct(stack, task);
                 }
-            } else {
-                phongColor = mult * getTriangleColor(triangle, lights,
+            }
+            if (triangle->material.reflectiveness < 1 && triangle->material.transparency == 0) {
+                phongColor = getTriangleColor(
+                        triangles, n_triangles,
+                        triangle, lights,
                         nLights,
                         origin,
-                        direction,
-                        &normalVector,
+                        -direction,
+                        normalVector,
+                        barVector,
                         textures);
             }
-
+            color += mult * phongColor;
         }
+
         else if (sphere){
-            origin = origin + direction * dist;
+            normalVector = getSphereNormal(sphere, origin);
             color += mult * getSphereColor(
                     sphere,
                     lights,
                     nLights,
                     origin,
-                    direction,
-                    &normalVector);
+                    -direction,
+                    normalVector);
         }
         else {
-            color += mult * (float3)(0.5f, 0.5f, 0.5f);
+            color += mult * (float3)(0.0f, 0.7f, 0.95f);
             break;
         }
         mult *= 0.25f;
