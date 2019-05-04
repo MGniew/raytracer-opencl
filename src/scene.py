@@ -106,7 +106,10 @@ class Scene(object):
             nonlocal texture_num
             if texture:
                 if texture.path not in textures:
-                    height, width, _ = self.load_image(texture.path).shape
+                    try:
+                        height, width, _ = self.load_image(texture.path).shape
+                    except:
+                        height, width = self.load_image(texture.path).shape
                     textures[texture.path] = (texture_num, width, height)
                     texture_num += 1
                 return textures[texture.path]
