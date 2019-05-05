@@ -55,6 +55,7 @@ class Connector(object):
             max_width = 128
             max_height = 128
 
+        print(max_width, max_height)
         images = [
             np.pad(
                 image,

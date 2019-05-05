@@ -120,8 +120,15 @@ class Scene(object):
         for name, material in scene.materials.items():
             diff_texture = load_texture(material.texture)
             ambi_texture = load_texture(material.texture_ambient)
-            spec_texture = load_texture(material.texture_specular_color)
-            bump_texture = load_texture(material.texture_bump)
+            if (diff_texture[0] >= 0 and ambi_texture[0] == -1):
+                ambi_texture = diff_texture
+            #spec_texture = load_texture(material.texture_specular_color)
+            spec_texture = (-1, 0, 0)
+            #bump_texture = load_texture(material.texture_bump)
+            bump_texture = (-1, 0, 0)
+
+            print(diff_texture, ambi_texture)
+
             reflectiveness = 0
             print(name)
             print("transp", material.transparency)

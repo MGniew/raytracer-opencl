@@ -48,6 +48,12 @@ class Material(object):
         self.texture_specular = texture_specular_color
         self.texture_bump = texture_bump
 
+
+        if self.texture_diffuse[0] >= 0 and all(e == 0 for e in self.diffuse):
+            self.diffuse = [1, 1, 1]
+        if self.texture_ambient[0] >= 0 and all(e == 0 for e in self.ambient):
+            self.ambient = [1, 1, 1]
+
         if self.transparency > 0:
             self.reflectiveness = 1 - self.transparency
 
