@@ -22,6 +22,8 @@ class Connector(object):
         img = Image.open(filename)
         img.load()
         data = np.asarray(img, dtype=np.uint8)
+        if len(data.shape) == 2:
+            data = np.repeat(data[:, :, np.newaxis], 3, axis=2)
 
         return data
 
