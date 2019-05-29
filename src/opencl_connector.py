@@ -173,7 +173,7 @@ class Connector(object):
 
         self.queue.flush()
 
-    def run_denoise(self, image):
+    def run_denoise(self, image, function_name=None):
 
         input_buf = cl.Buffer(
             self.context,

@@ -547,7 +547,7 @@ __kernel void get_image(__constant struct Camera* camera,
         pixelX += pixelY % noise;
     }
 
-    int samples = 5;
+    int samples = 1;
     float3 result = (float3)(0.0f, 0.0f, 0.0f);
 
     for(int i = 0; i < samples; i++) {
