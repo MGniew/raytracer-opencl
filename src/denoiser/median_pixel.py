@@ -51,16 +51,6 @@ class MedianPixel(Denoiser):
 
         return pixels[median_pixel_index]
 
-    def __get_pixel_distance(self, pixel_a, pixel_b, norm=1):
-
-        if len(pixel_a) != len(pixel_b):
-            raise Exception("Wrong pixel size")
-
-        diff = [v - pixel_b[i] for i, v in enumerate(pixel_a)]
-        diff = sum([v**norm for v in diff])
-        diff = diff**(1/3)
-        return diff
-
     def _denoise(self, image, connector):
 
         if connector:

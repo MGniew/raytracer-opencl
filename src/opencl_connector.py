@@ -175,13 +175,17 @@ class Connector(object):
 
     def run_denoise(self, image, function_name=None):
 
+        functions = {
+                "mean": self.program.get_means,
+                "median": self.program_get_median}
+        fun = functions.get(function_name, self.program.get_means)
+
         input_buf = cl.Buffer(
             self.context,
             cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR,
             hostbuf=image)
 
-        self.program.get_means(
-            self.queue,
+        fun(self.queue,
             (np.int32(self.width/self.noise), np.int32(self.height)),
             None,
             input_buf)
