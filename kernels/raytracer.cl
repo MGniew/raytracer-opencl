@@ -298,7 +298,7 @@ float3 getTriangleColor(
         normalVector = -normalVector; 
     }
 
-    float3 resultColor = ambient;
+    float3 resultColor = ambient * (float3)(0.6f, 0.6f, 0.6f);
     for (int i = 0; i < nLights; i++) {
         float3 lightVector = normalize(lights[i].position - crossPoint);
         float n_dot_l = dot(lightVector, normalVector);
@@ -311,7 +311,7 @@ float3 getTriangleColor(
                 v_dot_r = 0;
             }
             resultColor += diffuse * lights[i].diffuse * n_dot_l +
-                specular * lights[i].specular * pow(v_dot_r, triangle->material.shininess) + //specShin
+                specular * lights[i].specular * pow(v_dot_r, triangle->material.shininess) +
                 ambient * lights[i].ambient;
         }
     }
@@ -438,6 +438,7 @@ float3 trace(
                     struct RayTask task = {new_ray, origin, mult * triangle->material.reflectiveness, depth+1};
                     push_struct(stack, task);
                 }
+                mult = 1 - triangle->material.reflectiveness;
             }
             if (triangle->material.reflectiveness < 1 && triangle->material.transparency == 0) {
                 phongColor = getTriangleColor(

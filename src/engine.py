@@ -51,10 +51,12 @@ class Engine(object):
         self.connector = Connector(
                 kernel_filename, scene, width, height, noise)
 
-        self.parent_conn, child_conn = Pipe()
-        self.gui_process = Process(
-                target=gui_worker, args=(child_conn, width, height))
-        self.gui_process.start()
+        if not self.no_gui:
+            self.parent_conn, child_conn = Pipe()
+            self.gui_process = Process(
+                    target=gui_worker, args=(child_conn, width, height))
+            self.gui_process.start()
+
         self.running = True
         self.denoiser = Denoiser.create("MeanPixel", width, height)
 
@@ -121,8 +123,27 @@ class Engine(object):
 
     def get_action_list(self):
         action_list = []
-        action_list += ["w"] * 30
-        action_list += ["e"] * 10
+        action_list += ["Nothing"] * 10
+        action_list += ["q"] * 60
+        action_list += ["w"] * 250
+        action_list += ["Up"] * 30
+        action_list += ["Nothing"] * 10
+        action_list += ["Down"] * 30
+        action_list += ["q"] * 90
+        action_list += ["e"] * 150 
+        action_list += ["w"] * 280
+        action_list += ["e"] * 45
+        action_list += ["Up"] * 30
+        action_list += ["Nothing"] * 10
+        action_list += ["Down"] * 30
+        action_list += ["e"] * 90
+        action_list += ["q"] * 45
+        action_list += ["w"] * 125
+        action_list += ["e"] * 90
+        action_list += ["w"] * 60
+        action_list += ["e"] * 365
+
+
         return action_list
 
     def action_generator(self):
@@ -137,12 +158,14 @@ class Engine(object):
         return True
 
     def animation_run(self):
-        if self.parent_conn.poll():
-            try:
-                self.parent_conn.recv()
-            except EOFError:
-                self.running = False
-                return False
+
+        if not self.no_gui:
+            if self.parent_conn.poll():
+                try:
+                    self.parent_conn.recv()
+                except EOFError:
+                    self.running = False
+                    return False
         self.running = self.action_generator()
         self.update()
         return self.running
@@ -157,14 +180,15 @@ class Engine(object):
                 break
             image = self.connector.get_result(self.wait)
             if image is not None:
-                try:
-                    # image = self.denoiser.denoise(image, self.connector)
-                    if self.record:
-                        self.save_frame(image)
-                    self.parent_conn.send(image.tobytes())
-                except BrokenPipeError:
-                    self.running = False
-                    break
+                # image = self.denoiser.denoise(image, self.connector)
+                if self.record:
+                    self.save_frame(image)
+                if not self.no_gui:
+                    try:
+                        self.parent_conn.send(image.tobytes())
+                    except BrokenPipeError:
+                        self.running = False
+                        break
                 self.connector.run()
 
         print("Quitting")

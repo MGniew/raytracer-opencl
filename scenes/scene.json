@@ -1,1 +1,2 @@
-{"Light": [{"position": [0, 1, 5], "material": {"ambient": [0.1, 0.1, 0.1], "specular": [0.4, 0.4, 0.4], "diffuse": [0.4, 0.4, 0.4]}}]} 
+{"Light": [{"position": [-2.2, 1.5, -4.3], "ambient": [0.1, 0.1, 0.1], "specular": [0.4, 0.4, 0.4], "diffuse": [0.4, 0.4, 0.4]},
+{"position": [0.05, 1.5, -4.3], "ambient": [0.1, 0.1, 0.1], "specular": [0.4, 0.4, 0.4], "diffuse": [0.4, 0.4, 0.4]}]}

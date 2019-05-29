@@ -7,7 +7,8 @@ class Material(object):
 
     material_struct = np.dtype(
         [("ambience", cl.cltypes.float3),
-         ("diffuse", cl.cltypes.float3), ("specular", cl.cltypes.float3),
+         ("diffuse", cl.cltypes.float3),
+         ("specular", cl.cltypes.float3),
          ("emissive", cl.cltypes.float3),
          ("texture_ambient", cl.cltypes.float3),
          ("texture_diffuse", cl.cltypes.float3),

@@ -128,8 +128,12 @@ class Scene(object):
             bump_texture = (-1, 0, 0)
 
             print(diff_texture, ambi_texture)
-
             reflectiveness = 0
+
+            if name == "M_wall_deco":
+                reflectiveness = 0.80
+            if name == "M_tv_screen":
+                reflectiveness = 0.15
             print(name)
             print("transp", material.transparency)
             print("density", material.optical_density)
