@@ -15,6 +15,7 @@ import os
 
 # move to __init__.py
 from src.denoiser.mean_pixel import MeanPixel  # noqa: F401
+from src.denoiser.median_pixel import MedianPixel  # noqa: F401
 
 MS_PER_UPDATE = 0.02
 
@@ -58,7 +59,7 @@ class Engine(object):
             self.gui_process.start()
 
         self.running = True
-        self.denoiser = Denoiser.create("MeanPixel", width, height)
+        self.denoiser = Denoiser.create("MedianPixel", width, height)
 
         self.next_frame = True
 
@@ -173,6 +174,8 @@ class Engine(object):
     def run(self):
 
         self.connector.run()
+        time_point_a = datetime.datetime.now()
+        total = 0
         self.previous = datetime.datetime.now()
         self.lag = 0
         while self.running:
@@ -180,7 +183,13 @@ class Engine(object):
                 break
             image = self.connector.get_result(self.wait)
             if image is not None:
-                # image = self.denoiser.denoise(image, self.connector)
+                image = self.denoiser.denoise(image, self.connector)
+                time_point_b = datetime.datetime.now()
+                diff = time_point_b - time_point_a
+                diff = diff.total_seconds()
+                total += diff
+                print("frame: ", diff)
+                time_point_a = time_point_b
                 if self.record:
                     self.save_frame(image)
                 if not self.no_gui:

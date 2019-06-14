@@ -9,6 +9,7 @@ class CnnAutoencoder(Denoiser):
     def __init__(self, width, height):
         super(CnnAutoencoder, self).__init__(width, height)
         self.model = None
+        self.load_model("cnn_models/model4.hdf5")
 
     def load_model(self, filename):
         self.model = load_model(filename)
@@ -31,16 +32,22 @@ class CnnAutoencoder(Denoiser):
         up_h = block_size
         bot_w = 0
         up_w = block_size
+        print(image.shape)
 
-        while bot_w < self.width:
+        while bot_h < self.height:
             row = []
-            while bot_h < self.height:
-                row.append(image[bot_h:up_h, bot_w:up_w])
-                bot_h += block_size
-                up_h += block_size
+            while bot_w < self.width:
+                row.append(image[bot_h:up_h, bot_w:up_w,:])
+                bot_w += block_size
+                up_w += block_size
             result.append(row)
-            bot_w += block_size
-            up_w += block_size
+            bot_h += block_size
+            up_h += block_size
+            bot_w = 0
+            up_w = block_size
+
+        print(len(result))
+        print(len(result[1]))
 
         return result
 
@@ -51,14 +58,23 @@ class CnnAutoencoder(Denoiser):
         return result
 
     def predict(self, chunk):
-        return self.model.predict(chunk)
+        chunk = np.expand_dims(chunk, axis=0)
+        return np.squeeze(self.model.predict(chunk))
 
     def _denoise(self, image, connector):
 
         image = image/255
+        image = np.reshape(image, (self.height, self.width, 3))
         chunks = self.split_array(image)
-        chunks = map(self.predict, chunks)
-        image = self.merge_array(chunks)
-        image = image * 255
-
-        return image
+        predicted = []
+        for row in chunks:
+            row_pred = []
+            for chunk in row:
+                print("chunk")
+                pred = self.predict(chunk)
+                print(pred.shape)
+                row_pred.append(pred)
+            predicted.append(row_pred)
+        image = self.merge_array(predicted)
+        image = np.round(image * 255)
+        return image.flatten().astype("uint8")

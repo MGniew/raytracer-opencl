@@ -46,7 +46,8 @@ class MedianPixel(Denoiser):
                     diff_sum += self.__get_pixel_distance(
                             pixels[i], pixels[k])
             if dist > diff_sum:
-                diff_sum = dist
+                #diff_sum = dist
+                dist = diff_sum
                 median_pixel_index = i
 
         return pixels[median_pixel_index]
@@ -57,14 +58,17 @@ class MedianPixel(Denoiser):
             raise Exception("Wrong pixel size")
 
         diff = [v - pixel_b[i] for i, v in enumerate(pixel_a)]
-        diff = sum([v**norm for v in diff])
-        diff = diff**(1/2)
+        if norm > 1:
+            diff = sum([abs(b) for v in diff])
+        else:
+            diff = sum([v**norm for v in diff])
+            diff = diff**(1/norm)
         return diff
 
     def _denoise(self, image, connector):
 
         if connector:
-            return connector.run_denoise(image)
+            return connector.run_denoise(image, "median")
 
         for y in range(self.height):
             for x in range((y + 1) % 2, self.width, 2):

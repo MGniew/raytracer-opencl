@@ -24,7 +24,6 @@ class Connector(object):
         data = np.asarray(img, dtype=np.uint8)
         if len(data.shape) == 2:
             data = np.repeat(data[:, :, np.newaxis], 3, axis=2)
-
         return data
 
     def send_textures(self):
@@ -173,12 +172,13 @@ class Connector(object):
 
         self.queue.flush()
 
-    def run_denoise(self, image, function_name=None):
+    def run_denoise(self, image, function_name):
 
+        print(function_name)
         functions = {
-                "mean": self.program.get_means,
-                "median": self.program_get_median}
-        fun = functions.get(function_name, self.program.get_means)
+                "mean": self.program.mean_filter,
+                "median": self.program.median_filter}
+        fun = functions[function_name]
 
         input_buf = cl.Buffer(
             self.context,
