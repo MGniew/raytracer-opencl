@@ -1,3 +1,9 @@
+
+# move to __init__.py
+from src.denoiser.mean_pixel import MeanPixel  # noqa: F401
+from src.denoiser.median_pixel import MedianPixel  # noqa: F401
+from src.denoiser.cnn import CnnAutoencoder
+
 from src.opencl_connector import Connector
 from src.gui.main_window import MainWindow
 from src.denoiser.base import Denoiser
@@ -13,9 +19,6 @@ import png
 import numpy as np
 import os
 
-# move to __init__.py
-from src.denoiser.mean_pixel import MeanPixel  # noqa: F401
-from src.denoiser.median_pixel import MedianPixel  # noqa: F401
 
 MS_PER_UPDATE = 0.02
 
@@ -59,7 +62,7 @@ class Engine(object):
             self.gui_process.start()
 
         self.running = True
-        self.denoiser = Denoiser.create("MedianPixel", width, height)
+        self.denoiser = Denoiser.create("CnnAutoencoder", width, height)
 
         self.next_frame = True
 
@@ -217,7 +220,7 @@ class Engine(object):
     def save_frame(self, data):
 
         data = np.reshape(data, (self.height, self.width*3))
-        with open("animation/{}.png".format(self.frame), "wb") as f:
+        with open("animation_cnn/{}.png".format(self.frame), "wb") as f:
             w = png.Writer(self.width, self.height)
             w.write(f, data)
 

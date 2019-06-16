@@ -87,7 +87,7 @@ class Connector(object):
                                       ("specular", cl.cltypes.float3)])
 
         self.result = np.zeros(
-                (self.width * self.height * 3), dtype=cl.cltypes.char)
+                (self.width * self.height * 3), dtype=np.uint8)  # dtype=cl.cltypes.char)
         self.camera_d = cl.Buffer(
             self.context,
             cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR,
@@ -174,7 +174,6 @@ class Connector(object):
 
     def run_denoise(self, image, function_name):
 
-        print(function_name)
         functions = {
                 "mean": self.program.mean_filter,
                 "median": self.program.median_filter}

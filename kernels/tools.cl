@@ -47,8 +47,6 @@ float get_distance(float3 pixel_a, float3 pixel_b) {
     return distance(pixel_a, pixel_b);
 }
 
-
-
 __kernel void median_filter(
         __global uchar* image) {
 
@@ -107,7 +105,7 @@ __kernel void median_filter(
             }
         }
         if (dist > diff_sum) {
-            diff_sum = dist;
+            dist = diff_sum;
             index = i;
         }
     }

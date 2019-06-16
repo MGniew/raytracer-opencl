@@ -59,7 +59,7 @@ class MedianPixel(Denoiser):
 
         diff = [v - pixel_b[i] for i, v in enumerate(pixel_a)]
         if norm > 1:
-            diff = sum([abs(b) for v in diff])
+            diff = sum([abs(v) for v in diff])
         else:
             diff = sum([v**norm for v in diff])
             diff = diff**(1/norm)

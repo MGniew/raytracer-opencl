@@ -9,4 +9,4 @@ Pillow
 sklearn
 pypng
 keras
-tensorflow-gpu
+tensorflow==1.10.1

@@ -3,6 +3,7 @@ from PIL import ImageShow
 import os
 from src.denoiser.mean_pixel import MeanPixel
 from src.denoiser.median_pixel import MedianPixel
+from src.denoiser.cnn import CnnAutoencoder
 import numpy as np
 from PIL import ImageFilter
 
@@ -30,22 +31,27 @@ def show_image_numpy(im):
 
 
 denoiser = MeanPixel(720, 480)
-original_image = load_image("./animation_single/0.png")
-noise_image = load_image("./animation_single_noise/0.png")
+original_image = load_image("./animations/animation_single/0.png")
+noise_image = load_image("./animations/animation_single_noise/0.png")
 print(denoiser.get_distance(original_image, original_image))
 print(denoiser.get_distance(original_image, noise_image))
 
-#ni = np.copy(noise_image)
-#ni = denoiser.denoise(ni, None)
-#print(denoiser.get_distance(ni, original_image))
-#show_image_numpy(ni)
+# ni = np.copy(noise_image)
+# ni = denoiser.denoise(ni, None)
+# print(denoiser.get_distance(ni, original_image))
+# show_image_numpy(ni)
+# 
+# denoiser = MedianPixel(720, 480)
+# ni = np.copy(noise_image)
+# ni = denoiser.denoise(ni, None)
+# print(denoiser.get_distance(ni, original_image))
+# show_image_numpy(ni)
 
-denoiser = MedianPixel(720, 480)
+denoiser = CnnAutoencoder(720, 480)
 ni = np.copy(noise_image)
 ni = denoiser.denoise(ni, None)
 print(denoiser.get_distance(ni, original_image))
 show_image_numpy(ni)
-
 
 
 
