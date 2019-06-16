@@ -49,7 +49,9 @@ print(denoiser.get_distance(original_image, noise_image))
 
 denoiser = CnnAutoencoder(720, 480)
 ni = np.copy(noise_image)
+print(1)
 ni = denoiser.denoise(ni, None)
+print(2)
 print(denoiser.get_distance(ni, original_image))
 show_image_numpy(ni)
 

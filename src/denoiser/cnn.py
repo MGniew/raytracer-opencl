@@ -15,6 +15,12 @@ class CnnAutoencoder(Denoiser):
         self.model = load_model(filename)
 
     def split_array(self, image, block_size=120):
+        rows = np.split(image, self.height/block_size, axis=0)
+        result = [np.split(r, self.width/block_size, axis=1) for r in rows]
+        result = [item for sublist in result for item in sublist]
+        return np.stack(result)
+
+    def split_array_old(self, image, block_size=120):
 
         if self.height < block_size:
             image = np.pad(image, (
@@ -48,27 +54,38 @@ class CnnAutoencoder(Denoiser):
         return result
 
     def merge_array(self, chunks, block_size=120):
+        result = [chunks[i, ...] for i in range(chunks.shape[0])]
+        bpr = self.width//block_size
+        result = [result[i:i+bpr] for i in range(0, len(result), bpr)]
+        result = [np.stack(r, axis=1) for r in result]
+        result = np.stack(result, axis=0)
 
-        rows = [np.concatenate(row, axis=1) for row in chunks]
-        result = np.concatenate(rows, axis=0)
         return result
 
+    # def merge_array(self, chunks, block_size=120):
+
+    #     rows = [np.concatenate(row, axis=1) for row in chunks]
+    #     result = np.concatenate(rows, axis=0)
+    #     return result
+
     def predict(self, chunk):
-        chunk = np.expand_dims(chunk, axis=0)
-        return np.squeeze(self.model.predict(chunk))
+        # chunk = np.expand_dims(chunk, axis=0)
+        # return np.squeeze(self.model.predict(chunk))
+        return self.model.predict(chunk)
 
     def _denoise(self, image, connector):
 
         image = image/255
         image = np.reshape(image, (self.height, self.width, 3))
         chunks = self.split_array(image)
-        predicted = []
-        for row in chunks:
-            row_pred = []
-            for chunk in row:
-                pred = self.predict(chunk)
-                row_pred.append(pred)
-            predicted.append(row_pred)
+        predicted = self.predict(chunks)
+        # predicted = []
+        # for row in chunks:
+        #     row_pred = []
+        #     for chunk in row:
+        #         pred = self.predict(chunk)
+        #         row_pred.append(pred)
+        #     predicted.append(row_pred)
         image = self.merge_array(predicted)
         image = np.round(image * 255)
         return image.flatten().astype("uint8")
