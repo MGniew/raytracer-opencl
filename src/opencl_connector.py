@@ -22,7 +22,8 @@ class Connector(object):
         img = Image.open(filename)
         img.load()
         data = np.asarray(img, dtype=np.uint8)
-
+        if len(data.shape) == 2:
+            data = np.repeat(data[:, :, np.newaxis], 3, axis=2)
         return data
 
     def send_textures(self):
@@ -31,6 +32,7 @@ class Connector(object):
         max_width = 0
         max_height = 0
         if self.scene.textures:
+            textures = {k: v[0] for k, v in self.scene.textures.items()}
             textures = {v: k for k, v in self.scene.textures.items()}
 
             for i in sorted(textures.keys()):
@@ -54,18 +56,16 @@ class Connector(object):
             max_width = 128
             max_height = 128
 
+        print(max_width, max_height)
         images = [
             np.pad(
                 image,
                 ((0, max_height - image.shape[0]),
                  (0, max_width - image.shape[1]),
                  (0, 4 - image.shape[2])),
-                "constant") for image in images]
+                "wrap") for image in images]
 
         n_images = len(images)
-
-        print(max_width)
-        print(max_height)
 
         images = np.concatenate(images, 0)
         img_format = cl.ImageFormat(cl.channel_order.RGBA,
@@ -87,7 +87,7 @@ class Connector(object):
                                       ("specular", cl.cltypes.float3)])
 
         self.result = np.zeros(
-                (self.width * self.height * 3), dtype=cl.cltypes.char)
+                (self.width * self.height * 3), dtype=np.uint8)  # dtype=cl.cltypes.char)
         self.camera_d = cl.Buffer(
             self.context,
             cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR,
@@ -104,13 +104,14 @@ class Connector(object):
             self.n_spheres = np.int32(len(self.scene.get_objects("Sphere")))
         else:
             self.n_spheres = np.int32(0)
+
+        triangles = self.scene.get_objects("Triangle")
         self.triangles_d = cl.Buffer(
             self.context,
             cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR,
-            hostbuf=np.array(self.scene.get_objects("Triangle")))
-        if self.scene.get_objects("Triangle"):
-            self.n_triangles = np.int32(
-                    len(self.scene.get_objects("Triangle")))
+            hostbuf=np.array(triangles))
+        if triangles:
+            self.n_triangles = np.int32(len(triangles))
         else:
             self.n_triangles = np.int32(0)
 
@@ -171,15 +172,19 @@ class Connector(object):
 
         self.queue.flush()
 
-    def run_denoise(self, image):
+    def run_denoise(self, image, function_name):
+
+        functions = {
+                "mean": self.program.mean_filter,
+                "median": self.program.median_filter}
+        fun = functions[function_name]
 
         input_buf = cl.Buffer(
             self.context,
             cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR,
             hostbuf=image)
 
-        self.program.get_means(
-            self.queue,
+        fun(self.queue,
             (np.int32(self.width/self.noise), np.int32(self.height)),
             None,
             input_buf)

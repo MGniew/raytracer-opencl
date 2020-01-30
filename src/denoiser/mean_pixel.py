@@ -32,7 +32,7 @@ class MeanPixel(Denoiser):
     def _denoise(self, image, connector):
 
         if connector:
-            return connector.run_denoise(image)
+            return connector.run_denoise(image, "mean")
 
         for y in range(self.height):
             for x in range((y + 1) % 2, self.width, 2):

@@ -1,3 +1,9 @@
+
+# move to __init__.py
+from src.denoiser.mean_pixel import MeanPixel  # noqa: F401
+from src.denoiser.median_pixel import MedianPixel  # noqa: F401
+from src.denoiser.cnn import CnnAutoencoder
+
 from src.opencl_connector import Connector
 from src.gui.main_window import MainWindow
 from src.denoiser.base import Denoiser
@@ -13,8 +19,6 @@ import png
 import numpy as np
 import os
 
-# move to __init__.py
-from src.denoiser.mean_pixel import MeanPixel  # noqa: F401
 
 MS_PER_UPDATE = 0.02
 
@@ -51,12 +55,14 @@ class Engine(object):
         self.connector = Connector(
                 kernel_filename, scene, width, height, noise)
 
-        self.parent_conn, child_conn = Pipe()
-        self.gui_process = Process(
-                target=gui_worker, args=(child_conn, width, height))
-        self.gui_process.start()
+        if not self.no_gui:
+            self.parent_conn, child_conn = Pipe()
+            self.gui_process = Process(
+                    target=gui_worker, args=(child_conn, width, height))
+            self.gui_process.start()
+
         self.running = True
-        self.denoiser = Denoiser.create("MeanPixel", width, height)
+        self.denoiser = Denoiser.create("CnnAutoencoder", width, height)
 
         self.next_frame = True
 
@@ -121,8 +127,27 @@ class Engine(object):
 
     def get_action_list(self):
         action_list = []
-        action_list += ["w"] * 30
-        action_list += ["e"] * 10
+        action_list += ["Nothing"] * 10
+        action_list += ["q"] * 60
+        action_list += ["w"] * 250
+        action_list += ["Up"] * 30
+        action_list += ["Nothing"] * 10
+        action_list += ["Down"] * 30
+        action_list += ["q"] * 90
+        action_list += ["e"] * 150 
+        action_list += ["w"] * 280
+        action_list += ["e"] * 45
+        action_list += ["Up"] * 30
+        action_list += ["Nothing"] * 10
+        action_list += ["Down"] * 30
+        action_list += ["e"] * 90
+        action_list += ["q"] * 45
+        action_list += ["w"] * 125
+        action_list += ["e"] * 90
+        action_list += ["w"] * 60
+        action_list += ["e"] * 365
+
+
         return action_list
 
     def action_generator(self):
@@ -137,12 +162,14 @@ class Engine(object):
         return True
 
     def animation_run(self):
-        if self.parent_conn.poll():
-            try:
-                self.parent_conn.recv()
-            except EOFError:
-                self.running = False
-                return False
+
+        if not self.no_gui:
+            if self.parent_conn.poll():
+                try:
+                    self.parent_conn.recv()
+                except EOFError:
+                    self.running = False
+                    return False
         self.running = self.action_generator()
         self.update()
         return self.running
@@ -150,6 +177,8 @@ class Engine(object):
     def run(self):
 
         self.connector.run()
+        time_point_a = datetime.datetime.now()
+        total = 0
         self.previous = datetime.datetime.now()
         self.lag = 0
         while self.running:
@@ -157,14 +186,21 @@ class Engine(object):
                 break
             image = self.connector.get_result(self.wait)
             if image is not None:
-                try:
-                    # image = self.denoiser.denoise(image, self.connector)
-                    if self.record:
-                        self.save_frame(image)
-                    self.parent_conn.send(image.tobytes())
-                except BrokenPipeError:
-                    self.running = False
-                    break
+                image = self.denoiser.denoise(image, self.connector)
+                time_point_b = datetime.datetime.now()
+                diff = time_point_b - time_point_a
+                diff = diff.total_seconds()
+                total += diff
+                print("frame: ", diff)
+                time_point_a = time_point_b
+                if self.record:
+                    self.save_frame(image)
+                if not self.no_gui:
+                    try:
+                        self.parent_conn.send(image.tobytes())
+                    except BrokenPipeError:
+                        self.running = False
+                        break
                 self.connector.run()
 
         print("Quitting")
@@ -184,7 +220,7 @@ class Engine(object):
     def save_frame(self, data):
 
         data = np.reshape(data, (self.height, self.width*3))
-        with open("animation/{}.png".format(self.frame), "wb") as f:
+        with open("animation_cnn/{}.png".format(self.frame), "wb") as f:
             w = png.Writer(self.width, self.height)
             w.write(f, data)
 

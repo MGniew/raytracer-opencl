@@ -23,7 +23,7 @@ class Camera(BaseObject):
             self,
             width=300,
             height=300,
-            position=[0, 1, 10],
+            position=[0, 1, 1],
             direction=[0, 0, -1],
             z_near=0.1,
             z_far=1000,
@@ -70,8 +70,8 @@ class Camera(BaseObject):
 
     def rotate(self, up, left, down, right):
 
-        angle_lr = math.pi * 0.01
-        angle_ud = math.pi * 0.01
+        angle_lr = math.pi/180
+        angle_ud = math.pi/180
 
         if right == left:
             angle_lr = 0
@@ -137,7 +137,7 @@ class Camera(BaseObject):
 
         if e == q:
             return
-        angle = math.pi * 0.01
+        angle = math.pi/180
         if e:
             angle = -angle
         self.direction = rotate_vec(self.direction, self.up, angle)
